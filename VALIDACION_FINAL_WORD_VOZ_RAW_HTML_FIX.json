@@ -1,0 +1,15 @@
+{
+  "frontend_js_ok": true,
+  "backend_python_ok": true,
+  "all_browser_voices_real_objects": true,
+  "spanish_default_voice": true,
+  "voice_test_ui": true,
+  "avatar_mouth_custom": true,
+  "raw_html_chat_hidden": true,
+  "weather_html_filtered": true,
+  "word_live_preview": true,
+  "office_docx_preview": true,
+  "api_test_no_raw_html": true,
+  "download_folder_handlers": true,
+  "image_zoom": true
+}

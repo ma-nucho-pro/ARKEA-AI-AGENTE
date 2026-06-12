@@ -1,0 +1,16 @@
+{
+  "no_invalid_models_in_templates": true,
+  "cleanup_broken_endpoint": true,
+  "auto_cleanup_on_load": true,
+  "qwen_coder_free": true,
+  "deepseek_v4_flash": true,
+  "stepfun_vision": true,
+  "nex_vision_free": true,
+  "voice_long_record": true,
+  "tabs_menu": true,
+  "bottom_search_ollama": true,
+  "weather_real": true,
+  "open_folder_generated": true,
+  "vision_no_json": true,
+  "router_skips_bad": true
+}

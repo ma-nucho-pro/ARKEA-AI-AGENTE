@@ -1,0 +1,11 @@
+{
+  "required_models_defined": true,
+  "stop_button_bound": true,
+  "model_selector_present": true,
+  "delete_model_present": true,
+  "auto_bootstrap": true,
+  "old_fast_message_removed": true,
+  "whisper_alias": true,
+  "python_syntax_ok": true,
+  "js_syntax_ok": true
+}

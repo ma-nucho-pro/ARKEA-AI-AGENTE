@@ -1,0 +1,8 @@
+Cambios finales:
+- El pack mínimo ya no falla por REQUIRED_LOW_RESOURCE_MODELS indefinido.
+- Whisper usa la ruta correcta /install-whisper-default y alias /install-whisper.
+- Ajustes > Modelos permite elegir modelo activo de chat, código, visión, embedding y STT.
+- Se agregó eliminar modelo seleccionado desde la interfaz.
+- Se agregó botón notorio Detener todo en la esquina superior derecha.
+- chat_local reintenta automáticamente con el modelo más rápido instalado si el elegido se demora.
+- Defaults nuevos: chat gemma3:270m, código qwen2.5-coder:0.5b, visión moondream:latest.

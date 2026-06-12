@@ -1,0 +1,13 @@
+{
+  "python_backend_syntax": true,
+  "frontend_js_syntax": true,
+  "clasifica_solo_instruccion_no_contexto_archivos": true,
+  "word_excel_ppt_prioridad_antes_de_imagen": true,
+  "miniatura_solo_si_usuario_pide_crear": true,
+  "open_folder_button": true,
+  "returns_folder_path_docs": true,
+  "png_image_fallback_not_html": true,
+  "uploaded_files_context_used": true,
+  "screen_camera_stop_top_buttons": true,
+  "model_pack_includes_fast_models": true
+}

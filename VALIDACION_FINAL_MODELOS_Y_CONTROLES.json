@@ -1,0 +1,10 @@
+{
+  "required_defined": true,
+  "route_select": true,
+  "route_delete": true,
+  "whisper_alias": true,
+  "ui_selector": true,
+  "stop_top": true,
+  "py_ok": true,
+  "js_ok": true
+}

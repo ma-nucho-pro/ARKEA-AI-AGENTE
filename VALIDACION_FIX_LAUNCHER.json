@@ -1,0 +1,9 @@
+{
+  "error_corregido": "PowerShell UnexpectedToken en línea del launcher BAT",
+  "causa": "La línea $LauncherContent tenía comillas escapadas de forma inválida en PowerShell.",
+  "solucion": "Se reemplazó por here-string PowerShell y se genera ABRIR_ARKEA_AI.bat + ABRIR_ARKEA_AI.cmd.",
+  "linea_mala_presente": false,
+  "here_string_presente": true,
+  "launcher_bat": "ABRIR_ARKEA_AI.bat",
+  "launcher_cmd": "ABRIR_ARKEA_AI.cmd"
+}

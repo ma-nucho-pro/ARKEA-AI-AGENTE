@@ -1,0 +1,13 @@
+{
+  "python_backend_syntax": true,
+  "frontend_js_syntax": true,
+  "api_presets_exist": true,
+  "free_models_included": true,
+  "cheap_models_included": true,
+  "frontend_preset_buttons": true,
+  "one_key_saves_multiple_apis": true,
+  "model_router_auto_task": true,
+  "agent_uses_router_for_chat": true,
+  "agent_uses_router_for_web_search": true,
+  "html_uses_artifact_router": true
+}

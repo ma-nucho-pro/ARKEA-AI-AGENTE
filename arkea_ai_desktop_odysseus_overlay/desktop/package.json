@@ -1,0 +1,49 @@
+{
+  "name": "arkea-ai",
+  "version": "1.0.0-final",
+  "description": "ARKEA AI final portable/setup",
+  "main": "main.js",
+  "author": "ARKEA",
+  "license": "MIT",
+  "scripts": {
+    "dist:portable": "electron-builder --win portable --x64",
+    "dist:nsis": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.arkea.ai",
+    "productName": "ARKEA AI",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      { "from": "backend-dist", "to": "backend-dist" },
+      { "from": "ollama", "to": "ollama" }
+    ],
+    "directories": { "output": "dist" },
+    "win": {
+      "icon": "assets/icon.ico",
+      "artifactName": "ARKEA-AI-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "ARKEA-AI-PORTABLE-FINAL-${version}.${ext}"
+    },
+    "nsis": {
+      "artifactName": "ARKEA-AI-Setup-FINAL-${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ARKEA AI",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    }
+  }
+}

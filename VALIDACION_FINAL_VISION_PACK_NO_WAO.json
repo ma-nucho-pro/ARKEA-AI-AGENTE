@@ -1,0 +1,12 @@
+{
+  "python_backend_syntax": true,
+  "frontend_js_syntax": true,
+  "vision_internet_api_first": true,
+  "skip_incomplete_api_without_noise": true,
+  "local_vision_pack_moondream": true,
+  "local_vision_pack_gemma3_4b": true,
+  "stop_screen_token_cancels_pending_capture": true,
+  "stop_camera_token_cancels_pending_capture": true,
+  "clean_voice_no_wao_wow": true,
+  "vision_question_uses_frame": true
+}

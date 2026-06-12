@@ -1,0 +1,219 @@
+ARKEA AI - PAQUETE FINAL CONSOLIDADO
+
+Este paquete reemplaza las versiones anteriores. Úsalo como base final para construir el instalador de Windows.
+
+Archivo de compilación:
+  build_windows_installer.ps1
+
+Salida esperada:
+  release\Arkea-AI-Setup-0.9.0.exe
+o el nombre configurado por electron-builder.
+
+Notas importantes:
+- Las APIs externas requieren claves del usuario en Ajustes.
+- Ollama se descarga desde el botón "Descargar Ollama".
+- Los modelos locales se descargan por ID desde la interfaz.
+- Las funciones que dependen de servicios externos no pueden funcionar sin internet/API key.
+- El agente local funciona con SQLite, workspace por carpeta, chats, skills, memoria, cámara/pantalla, modelos y visualizador HTML.
+
+Contacto visible en la app:
+  robertmanuchojarapeche@gmail.com
+  betomanuchobullicio@gmail.com
+
+
+CONFIRMACIÓN FINAL DE FUNCIONES AGREGADAS
+- Guardar APIs por tipo y probar APIs una por una desde Ajustes > APIS.
+- Generación real de archivos DOCX, XLSX, PPTX y HTML según el prompt.
+- Flujo de voz optimizado con faster-whisper cacheado en memoria del backend.
+- Respuesta visual HTML + respuesta por voz al mismo tiempo.
+- Catálogo de modelos locales ampliado y ordenado por chat, código, visión, imagen, voz, traducción y embeddings.
+- Diagnóstico de botones desde Ajustes > Diagnóstico para validar UI, acciones y endpoints base.
+- Botones de API incluyen “Probar API”.
+- Los archivos generados se guardan en la carpeta local del proyecto/chat.
+
+LIMITACIONES REALES
+- Las APIs externas solo funcionarán cuando el usuario coloque API Key/endpoint/modelo válidos.
+- Crear imágenes/video reales requiere API externa o motor local como ComfyUI/Automatic1111.
+- Ollama debe instalarse desde el botón “Descargar Ollama” y luego descargar modelos por ID.
+
+AJUSTES FINALES DE ESTA ENTREGA
+- El icono oficial de ARKEA AI fue reemplazado por el logo PNG proporcionado por Manu.
+- El instalador usa el nuevo icono en Windows.
+- Modelos detecta si Ollama ya está instalado; si no está, muestra descarga oficial.
+- Se agregó botón “Buscar modelos en Ollama” que abre https://ollama.com/search.
+- Descargar modelo evita doble clic con botón de carga y mensaje de progreso.
+- El backend no descarga dos veces si el modelo ya aparece instalado.
+- Cámara y pantalla ahora limpian srcdoc y muestran la captura directamente en el visualizador.
+- Cámara y pantalla usan botón de carga para evitar clics repetidos.
+
+
+PARCHE FINAL DE VELOCIDAD Y OLLAMA
+- Detección rápida de Ollama con timeouts cortos.
+- Si Ollama está instalado pero no corre, ARKEA intenta iniciarlo en segundo plano sin congelar la app.
+- Si existe cualquier modelo instalado, ARKEA usa ese modelo en vez de exigir gemma3:1b.
+- Respuesta normal de chat tiene límite duro para evitar esperas de varios minutos.
+- Tareas comunes como calculadora, HTML, Word, Excel y PPT se generan por reglas internas sin esperar Ollama.
+- Botón Actualizar modelos para volver a detectar Ollama sin reinstalarlo.
+- Botones de descarga bloquean doble clic para evitar descargas repetidas.
+- Cámara y pantalla muestran la imagen inmediatamente; el análisis IA tiene límite corto.
+- Voz local usa modelo Whisper cacheado para no cargarlo de nuevo en cada dictado.
+
+
+PARCHE FINAL EXTRA: OLLAMA + VELOCIDAD + CÁMARA EN VIVO
+- Se eliminó el mensaje antiguo de “No pude conectar con Ollama todavía”.
+- Si Ollama ya está instalado, ARKEA lo detecta rápido y no obliga a reinstalar.
+- Si Ollama está instalado pero apagado, ARKEA intenta iniciarlo sin congelar la interfaz.
+- Si el modelo preferido no existe, usa automáticamente cualquier modelo instalado.
+- El chat local tiene límite corto para evitar esperas de varios minutos.
+- La cámara ahora funciona en tiempo real: muestra el video en el visualizador y analiza objetos cada pocos segundos.
+- La pantalla también muestra captura inmediata y analiza en segundo plano sin bloquear.
+
+
+PARCHE FINAL DEFINITIVO - ENVÍO, OLLAMA Y VELOCIDAD
+- Enter envía el chat; Shift+Enter deja salto de línea.
+- El botón Enviar se bloquea mientras procesa para evitar dobles mensajes.
+- La detección de Ollama usa timeouts cortos, cache y fallback automático al primer modelo instalado.
+- El builder intenta incluir OllamaSetup.exe dentro del instalador de ARKEA AI. Si no puede descargarlo durante la compilación, la app abre el enlace oficial.
+- El botón Descargar Ollama ejecuta el instalador incluido cuando existe, o abre el enlace oficial.
+- Cámara/pantalla muestran la vista inmediatamente y analizan en segundo plano sin bloquear la interfaz.
+
+
+PARCHE FINAL 100% USABILIDAD CHAT
+- Botón Enviar enlazado por click y pointerdown.
+- Enter envía; Shift+Enter hace salto de línea.
+- La barra de envío queda visible con CSS sticky.
+- Se bloquea el botón mientras responde para evitar doble envío.
+- Se evita que los errores de análisis de pantalla/cámara llenen el chat.
+- Cámara/pantalla muestran imagen primero; análisis IA va por detrás.
+
+
+PARCHE FINAL: ENVÍO + VOZ AUTOMÁTICA + ESTILO WINDOWS 11
+- Corregido error crítico: sendingMessage is not defined.
+- Enviar funciona con clic, pointerup y Enter.
+- Shift+Enter conserva salto de línea.
+- La voz se envía automáticamente cuando detecta silencio después de hablar.
+- No duplica el mensaje de voz en el chat.
+- Fuentes cambiadas a Segoe UI Variable / estilo Windows 11 Aero Glass.
+- Cámara y pantalla siguen visibles en tiempo real; para reconocer objetos se requiere modelo de visión como gemma3:4b, llava o moondream.
+
+
+PARCHE REAL FINAL PROFUNDO
+- Corregido envío por clic, pointerup, Enter e inline HTML fallback.
+- window.send queda exportado globalmente.
+- Se eliminó causa de bloqueo por variables JS mal declaradas.
+- Voz automática se detiene con silencio y envía sola si Autoenviar voz está activo.
+- Agregado pack mínimo gratis/pocos recursos:
+  chat: gemma3:270m
+  código: qwen2.5-coder:0.5b
+  visión: moondream:latest
+  memoria: nomic-embed-text
+  transcripción: faster-whisper tiny
+- El pack se ofrece en bienvenida y Ajustes > Modelos.
+- Pantalla/cámara muestran vista en vivo; reconocimiento requiere pack mínimo o modelo de visión instalado.
+
+
+VALIDACIÓN FINAL REAL:
+- JS syntax OK: True
+- Python syntax OK: True
+- sendingMessage declarada: True
+- sin global voice accidental: True
+- window.send exportado: True
+- botón enviar inline fallback: True
+- Enter inline fallback: True
+- bindChatSend existe: True
+- voz auto por silencio: True
+- pack mínimo backend: True
+- pack mínimo endpoint: True
+- pack mínimo frontend: True
+
+
+AUTO-INSTALACIÓN INTEGRADA EN EL EXE
+- El builder descarga OllamaSetup.exe y lo incluye como recurso del instalador.
+- Al abrir ARKEA AI por primera vez, el proceso Electron intenta detectar Ollama.
+- Si no está instalado, ejecuta el instalador incluido de Ollama.
+- Si Ollama ya existe, no lo reinstala: intenta iniciar `ollama serve`.
+- En segundo plano prepara faster-whisper tiny y descarga el pack mínimo de modelos:
+  * gemma3:270m para chat rápido
+  * qwen2.5-coder:0.5b para código
+  * moondream:latest para visión ligera
+  * nomic-embed-text para memoria/embeddings
+- Esto no congela la interfaz; el chat queda disponible mientras se prepara el entorno.
+- La instalación de modelos requiere internet la primera vez. Luego funcionan local/offline.
+
+
+CORRECCIÓN FINAL AUTÓNOMA DOCS + VISIÓN + MODELOS
+- Pack automático por comandos Ollama: gemma3:270m, gemma3:1b, llama3.2:1b, qwen2.5-coder:0.5b, moondream:latest y nomic-embed-text.
+- El modelo rápido por defecto es gemma3:270m; puedes cambiarlo en Ajustes > Modelos.
+- Botones superiores de Detener pantalla y Detener cámara aparecen cuando activas pantalla/cámara.
+- Subida de archivos: imagen, video, audio, PDF, Word, Excel, PPT, TXT, MD, CSV, JSON, código y ZIP. Los documentos extraen texto para contexto.
+- Si subes imagen, ARKEA envía data_url al modelo de visión para poder decir qué ve.
+- Word, Excel y PowerPoint se generan con logo, colores ARKEA, tablas/cuadros y estilo profesional.
+- Si pides simulador o app interactiva, genera HTML rápido sin esperar a un modelo lento.
+- Si pides organizar carpeta del chat, organiza archivos dentro de la carpeta activa y crea reporte.
+- Imagen local: genera SVG editable gratis si no hay API o ComfyUI. Para imagen realista se requiere conectar API o ComfyUI/Stable Diffusion.
+
+
+CORRECCIÓN FINAL: INTENCIÓN, ARCHIVOS, WORD/EXCEL/PPT Y CARPETA
+- Clasificador corregido: ARKEA decide la acción usando solo la instrucción principal del usuario.
+- El texto/nombre de archivos subidos ya NO puede disparar por error una miniatura.
+- Word, Excel y PowerPoint tienen prioridad sobre imagen/miniatura.
+- Si subes Excel/Word/PPT/PDF/TXT/MD/CSV/JSON, ARKEA extrae contenido y lo usa como contexto.
+- Si dices “crea un Word con el Excel que subí”, genera Word, no miniatura.
+- Botón “Abrir carpeta” agregado junto a Descargar.
+- Imagen: si no hay API/ComfyUI, genera PNG local bonito con Pillow, no HTML ni miniatura falsa.
+- Para imagen IA realista se requiere configurar API de imagen o ComfyUI/Stable Diffusion; Ollama por sí solo no genera imágenes.
+- Botones superiores de detener pantalla/cámara se mantienen.
+
+
+CORRECCIÓN VISIÓN + DETENER PANTALLA/CÁMARA
+- Si preguntas “qué ves en mi pantalla/cámara”, ARKEA analiza el último frame de pantalla/cámara, no lo manda al chat de texto.
+- Visión usa primero API de internet si está guardada en Ajustes > APIS tipo vision.
+- Si no hay API vision, usa una API chat compatible OpenAI/OpenRouter como respaldo.
+- Si no hay API, usa modelo local de visión: moondream, gemma3:4b o llava.
+- Si no hay nada configurado, muestra mensaje claro sin fingir que vio la imagen.
+- Detener pantalla ahora corta el intervalo, borra el frame y cambia la vista a “Pantalla detenida”.
+- Detener cámara ahora corta el stream, borra el frame y cambia la vista a “Cámara detenida”.
+
+
+CORRECCIÓN FINAL VISIÓN PACK + DETENER + VOZ NORMAL
+- El pack local ahora incluye moondream:latest y gemma3:4b para visión local.
+- La visión con internet se usa automáticamente si guardas una API vision/chat compatible en Ajustes > APIS.
+- No se puede incluir una API key de internet dentro del instalador; eso sería inseguro y cobraría a una cuenta privada.
+- Si hay una API guardada incompleta, ARKEA ya no muestra errores técnicos largos de Base URL/API key.
+- Detener pantalla usa token de cancelación para que un frame pendiente no vuelva a aparecer después de detener.
+- Detener cámara usa token de cancelación y detiene el stream real.
+- La voz ya no agrega “wow/wao/guau” ni frases extra al inicio.
+
+
+CORRECCIÓN FINAL: APIS RECOMENDADAS + ROUTER AUTOMÁTICO
+- Ajustes > APIS ahora tiene sección “Recomendaciones ARKEA por plantillas”.
+- Solo pegas una OPENROUTER_API_KEY y aplicas:
+  * GRATIS ARKEA
+  * Barato DeepSeek/visión
+  * Plantilla tipo ENV anterior
+- La plantilla gratis incluye:
+  * google/gemini-2.5-flash:free
+  * xiaomi/mimo-flash:free
+  * nex-agi/nex-n2-pro:free
+  * openrouter/auto
+  * nvidia/nemotron-3-ultra-550b-a55b:free
+- La plantilla barata incluye:
+  * deepseek/deepseek-v4-flash
+  * xiaomi/mimo-v2.5
+  * stepfun/step-3.7-flash
+  * openrouter/auto
+- Se agregó router automático de modelos por tarea:
+  chat, visión, código, artefactos HTML, documentos, archivos, búsqueda web.
+- Si pides “conéctate a internet y busca hoteles”, usa API web_search si está guardada.
+- Si pides crear web/app/juego/dashboard, usa modelo tipo artifact/code antes de fallback local.
+- Tu prompt base ARKEA quedó integrado como ARKEA_AGENT_SYSTEM.
+
+
+CORRECCIÓN SOLICITADA: WORD EN CARPETA DEL CHAT + VISTA LIBREOFFICE + RESPUESTA VISUAL
+- Word, Excel y PPT ahora se guardan en la carpeta activa del chat seleccionado, no en Documentos/global.
+- Se agregó ruta segura /api/arkea/files/download para descargar archivos creados dentro del workspace/chat.
+- Si LibreOffice está instalado, ARKEA intenta convertir DOCX/XLSX/PPTX a PDF con soffice --headless para verlo en pantalla; si no está instalado, usa vista HTML tipo LibreOffice/Office.
+- El Word se ve en el visualizador con estilo Writer: cinta superior, hoja, contenido real y ruta del archivo.
+- Si el usuario pide documentos amplios/extensos/completos, ARKEA pide al modelo 18 a 30 párrafos.
+- Las preguntas normales ahora generan una respuesta visual HTML con idea central, mapa semántico, cuadro rápido y ruta sugerida.
+- Se agregó Canvas editable básico: puedes abrirlo, seleccionar texto y pedir por voz/chat que lo redacte, mejore, cambie o corrija.

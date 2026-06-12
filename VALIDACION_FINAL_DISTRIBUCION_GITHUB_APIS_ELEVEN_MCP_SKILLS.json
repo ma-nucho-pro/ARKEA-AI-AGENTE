@@ -1,0 +1,13 @@
+{
+  "python_backend_syntax": true,
+  "frontend_js_syntax": true,
+  "openrouter_distributor_templates": true,
+  "openrouter_image_bridge_saved_by_preset": true,
+  "openai_image_api_available": true,
+  "elevenlabs_voice_api_connection": true,
+  "skills_routes_compile": true,
+  "mcp_routes_compile": true,
+  "license_notice_added": true,
+  "github_workflow_added": true,
+  "one_click_cmd_added": true
+}

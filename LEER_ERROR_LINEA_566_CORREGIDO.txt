@@ -1,0 +1,2 @@
+Corregido el error de PowerShell en build_windows_installer.ps1 línea del LauncherContent.
+Ahora el script genera release\ABRIR_ARKEA_AI.bat y release\ABRIR_ARKEA_AI.cmd sin romper por comillas.

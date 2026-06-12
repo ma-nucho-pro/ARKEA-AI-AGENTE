@@ -1,0 +1,13 @@
+{
+  "js_ok": true,
+  "py_ok": true,
+  "no_broken_models_in_templates": true,
+  "openrouter_free_included": true,
+  "qwen_coder_free_included": true,
+  "xiaomi_valid_included": true,
+  "window_controls": true,
+  "multilang": true,
+  "voice_no_auto_cut": true,
+  "vision_json_clean": true,
+  "no_prefab_game": true
+}

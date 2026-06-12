@@ -1,0 +1,13 @@
+{
+  "python_backend_syntax": true,
+  "frontend_js_syntax": true,
+  "word_saves_to_chat_folder": true,
+  "office_live_preview": true,
+  "libreoffice_pdf_conversion": true,
+  "download_route_added": true,
+  "visual_question_html": true,
+  "long_word_prompt": true,
+  "canvas_editable": true,
+  "raw_html_sanitized": true,
+  "pdf_preview_frontend": true
+}

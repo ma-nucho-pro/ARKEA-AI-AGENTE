@@ -1,0 +1,10 @@
+{
+  "python_backend_syntax": true,
+  "frontend_js_syntax": true,
+  "vision_usa_api_internet_primero": true,
+  "vision_fallback_chat_api_openrouter_openai": true,
+  "pregunta_que_ves_usa_frame_actual": true,
+  "detener_pantalla_corta_intervalo_y_frame": true,
+  "detener_camara_corta_stream_y_frame": true,
+  "card_configurar_vision_internet": true
+}

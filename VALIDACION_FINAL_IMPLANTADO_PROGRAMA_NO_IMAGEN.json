@@ -1,0 +1,13 @@
+{
+  "interfaz_programa_reemplazada": true,
+  "avatar_boca_custom": true,
+  "fondo_valley_sky_custom": true,
+  "voz_larga": true,
+  "vista_en_vivo": true,
+  "imagen_png_zoom": true,
+  "subida_archivo_en_chat": true,
+  "openrouter_free_code": true,
+  "image_api_connections": true,
+  "sin_args_json": true,
+  "chat_controlado": true
+}

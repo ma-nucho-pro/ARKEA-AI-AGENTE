@@ -1,0 +1,13 @@
+{
+  "ids_core": true,
+  "avatar_custom_mouth_js": true,
+  "background_preset_js": false,
+  "live_preview_js": true,
+  "image_zoom_js": true,
+  "chat_timeout_long": true,
+  "voice_long": true,
+  "openrouter_code_free": true,
+  "image_api_connections": true,
+  "no_args_json_alert": true,
+  "controlled_chat_error": true
+}

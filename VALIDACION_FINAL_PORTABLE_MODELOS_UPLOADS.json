@@ -1,0 +1,13 @@
+{
+  "JS app syntax": true,
+  "JS Electron syntax": true,
+  "Python backend syntax": true,
+  "Portable EXE build target": true,
+  "NSIS setup optional": true,
+  "Auto install Ollama in EXE bootstrap": true,
+  "Auto pull required models": true,
+  "Gemma Dev Agent skill installed on startup": true,
+  "Upload images/videos/audio/docs in chat": true,
+  "Send button + Enter fallback": true,
+  "Voice auto-send after silence": true
+}

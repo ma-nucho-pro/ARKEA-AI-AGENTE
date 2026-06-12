@@ -1,0 +1,8 @@
+Para compartir con otras personas:
+
+1. Ejecuta CREAR_EXE_ARKEA_AI.cmd en Windows.
+2. Espera a que termine.
+3. En la carpeta release, comparte el instalador .exe real.
+4. No compartas __uninstaller-nsis-arkea-ai.exe porque es desinstalador.
+
+Si quieres que GitHub cree el .exe, sube este repositorio y ejecuta Actions > Build Windows Installer.

@@ -1,0 +1,23 @@
+ARKEA AI - cambios implantados en el programa real
+
+Esta versión NO es una imagen ni mockup. Se cambió el frontend real, estilos CSS, app.js y backend.
+
+Cambios:
+- Interfaz remaquetada con estilo Jade Glass fiel al HTML de referencia.
+- Avatar con boca animada al hablar/responder; también funciona al subir una imagen personalizada como avatar.
+- Fondos: Valle Jade y Cielo Aero incluidos. También permite fondo personalizado.
+- Cambio de fondo corregido: aplica de inmediato y guarda el preset.
+- Voz: escucha más tiempo; silencio por defecto 6s y máximo 300s para no cortar frases largas.
+- Vista previa en vivo: al enviar prompt se muestra proceso en vivo para Word, Excel, PPT, imagen, código o chat.
+- Código en vivo: si se pide simulación, web, HTML, app o juego, se ve escritura progresiva en la pestaña Código.
+- Imagen: se muestra como imagen real en el visualizador con zoom + / - / 100%.
+- Descargar / abrir carpeta corregidos para usar archivo, URL o carpeta activa.
+- Subir archivo: ahora aparece en chat, no invade el visualizador. Si es imagen intenta analizarla con visión y responder por texto/voz.
+- Recomendaciones OpenRouter: agregado modelo gratis de código qwen/qwen3-coder:free.
+- Imagen por API: image_lab ahora intenta usar APIs guardadas tipo image/image_generation antes del fallback local.
+- Errores backend controlados: ya no devuelve Internal Server Error crudo.
+- Error Args debe ser JSON eliminado: MCP acepta texto normal o JSON.
+
+Limitación honesta:
+- La edición real de imagen por zona necesita una API de imagen/inpainting o ComfyUI conectado. El programa la deja preparada y avisa si no hay API.
+- Ver Word/Excel/PPT “mientras se escribe” se simula visualmente en tiempo real y luego se muestra vista previa del archivo generado, porque esos formatos se guardan como archivos binarios finales.

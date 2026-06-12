@@ -1,0 +1,26 @@
+# Secrets
+.env
+*.key
+*.pem
+*.p12
+
+# Local user data
+arkea_ai_desktop_odysseus_overlay/data/
+**/data/*.db
+**/uploads/
+**/generated/
+**/workspace/
+**/node_modules/
+**/__pycache__/
+*.pyc
+
+# Build outputs
+_work/
+release/
+dist/
+build/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

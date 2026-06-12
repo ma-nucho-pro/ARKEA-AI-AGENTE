@@ -1,0 +1,17 @@
+{
+  "JS app": true,
+  "JS desktop": true,
+  "Python backend": true,
+  "Enviar global window.send": true,
+  "Botón enviar fallback HTML": true,
+  "Enter fallback HTML": true,
+  "Voz automática por silencio": true,
+  "Pack modelos backend": true,
+  "Endpoint pack": true,
+  "Pack modelos frontend": true,
+  "Auto bootstrap frontend": true,
+  "Auto bootstrap EXE": true,
+  "Auto bootstrap build EXE": true,
+  "OllamaSetup incluido resource": true,
+  "Copia OllamaSetup a assets": true
+}

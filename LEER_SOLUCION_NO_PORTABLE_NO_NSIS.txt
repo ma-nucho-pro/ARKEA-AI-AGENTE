@@ -1,0 +1,9 @@
+Solución aplicada:
+
+Se eliminó la construcción portable y NSIS porque en tu PC falló con macros x64_app_files/extractEmbeddedAppPackage.
+Ahora el builder usa electron-builder --dir y genera una carpeta ejecutable estable:
+
+release\ARKEA-AI-APP\ARKEA AI.exe
+release\ABRIR_ARKEA_AI.bat
+
+No muevas solo el EXE. Ejecuta el BAT o el EXE dentro de su carpeta.

@@ -1,0 +1,8 @@
+{
+  "portable_removed": true,
+  "nsis_removed": true,
+  "uses_electron_builder_dir": true,
+  "expected_output_1": "release\\ABRIR_ARKEA_AI.bat",
+  "expected_output_2": "release\\ARKEA-AI-APP\\ARKEA AI.exe",
+  "reason": "El target portable fallaba en Windows con macros NSIS; --dir evita NSIS/portable y genera una app ejecutable real con todos sus recursos."
+}

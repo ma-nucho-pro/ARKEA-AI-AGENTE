@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>ARKEA AI</title>
+  <link rel="stylesheet" href="/static/styles.css"/>
+</head>
+<body class="theme-jade">
+  <div class="app-shell">
+    <header class="title-bar glass-morphism" data-purpose="title-bar">
+      <div class="brand">
+        <img class="logo" src="/static/assets/arkea-logo.png"/>
+        <div class="brand-copy">
+          <strong>ARKEA AI</strong>
+          <span>Agente de IA multimodal para memoria, skills, modelos...</span>
+        </div>
+      </div>
+      <div class="top-controls">
+        <button id="stopScreenTop" class="glass-button" hidden>▣ Detener pantalla</button>
+        <button id="stopCameraTop" class="glass-button" hidden>▣ Detener cámara</button>
+        <button id="stopVoiceTop" class="glass-button">▣ Detener voz</button>
+        <button id="stopAllTop" class="danger-stop">✕ Detener todo</button>
+        <button id="openSettingsTop" class="glass-button">⚙ Ajustes</button>
+      </div>
+      <div class="status-zone">
+        <div class="badge" id="statusBadge"><span class="pulse"></span> Iniciando...</div>
+        <button id="winMin" class="win-dot">—</button><button id="winMax" class="win-dot">□</button><button id="winClose" class="win-dot close">×</button>
+      </div>
+    </header>
+
+    <main class="main-layout" data-purpose="main-layout">
+      <aside class="left-rail">
+        <section class="profile glass-morphism" data-purpose="sidebar">
+          <div class="avatar-card">
+            <div class="avatar-face emotion-neutral" id="avatarFace">
+              <img id="customAvatarImg" hidden />
+              <div class="avatar-eyes"><span></span><span></span></div>
+              <div class="avatar-brows"><span></span><span></span></div>
+              <div class="avatar-mouth" id="avatarMouth"></div>
+              <div class="avatar-glow"></div>
+            </div>
+            <h2>ARKEA <span>AI</span></h2>
+            <p id="avatarCaption">En línea y listo para ayudarte</p>
+          </div>
+          <div class="quick-grid">
+            <button id="talkBtn"><b>🎙</b> Hablar</button>
+            <button id="cameraBtn"><b>📷</b> Cámara</button>
+            <button id="screenBtn"><b>🖥</b> Pantalla</button>
+          </div>
+          <div class="mini-prompt"><input id="miniPrompt" placeholder="Escribe aquí..."/><button id="miniSend">Enviar</button></div>
+        </section>
+
+        <section class="voice-panel glass-morphism">
+          <label>VOZ SELECCIONADA</label>
+          <select id="voices"></select>
+          <textarea id="textoVoz" class="voice-test-box">Hola, soy la voz narradora de ARKEA AI. Puedo hablar en varios idiomas según la voz seleccionada.</textarea>
+          <div class="voice-actions"><button id="testVoiceBtn">Probar voz</button><button id="pauseVoiceBtn">Pausar</button><button id="resumeVoiceBtn">Reanudar</button><button id="stopBrowserVoiceBtn">Detener</button></div>
+          <label class="toggle"><span><b>Autoenviar voz</b><small>Envía tu mensaje al hablar.</small></span><input type="checkbox" id="autoListen" checked/></label>
+          <label class="toggle"><span><b>Responder con voz</b><small>ARKEA leerá las respuestas.</small></span><input type="checkbox" id="voiceOut" checked/></label>
+          <label class="toggle"><span><b>Modo enfoque</b><small>Reduce distracciones visuales.</small></span><input type="checkbox" id="focusMode"/></label>
+          <div class="side-actions"><button id="openSettings">⚙ Ajustes</button><button id="micHelpBtn">Ayuda micrófono</button><button id="stopVoice">Pausar voz</button></div>
+          <div class="notice">ARKEA AI sigue instrucciones exactamente.</div>
+          <div id="sideList" class="side-list"></div>
+        </section>
+      </aside>
+
+      <section class="chat-panel glass-morphism" data-purpose="chat-panel">
+        <div class="panel-tabs">
+          <button id="tabChat" class="active">Chat</button><button id="tabVoice">Voz</button><button id="tabSkills">Skills</button>
+          <span></span><button id="newChat">+ Nuevo chat</button><button id="quickMenuBtn" class="dots">⋮</button><div id="quickMenu" class="quick-menu" hidden><button data-quick="clear">Limpiar chat</button><button data-quick="new-chat">Nuevo chat</button><button data-quick="apis">APIS</button><button data-quick="skills">Skills</button><button data-quick="models">Actualizar modelos</button></div>
+        </div>
+        <div id="messages" class="messages"><div class="msg system">Arkea listo. Escribe o habla para crear Word, Excel, PPT, HTML, imagen, investigar o analizar archivos.</div></div>
+        <div class="composer">
+          <textarea id="prompt" placeholder="Escribe tu mensaje o usa el micrófono..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();window.send&&window.send()}"></textarea>
+          <button class="mic-inline" id="talkBtnInline" title="Hablar">🎙</button>
+          <button class="send-inline" id="sendInline" title="Enviar">➤</button>
+        </div>
+        <input id="fileUpload" type="file" hidden multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json,.zip,.html,.js,.ts,.py"/>
+        <div class="chat-actions"><button class="primary" id="send" onclick="window.send&&window.send()">✓ Enviar</button><button id="uploadBtn">Subir</button><button id="visualMode">Modo HTML visual</button><button id="clear">Limpiar</button><small id="liveStatus"><span class="pulse"></span> Vista y código en vivo.</small></div>
+      </section>
+
+      <section class="preview-panel glass-morphism" data-purpose="preview-panel">
+        <div class="preview-head"><h3>Vista previa</h3><button id="previewLabel">Sin archivo</button></div>
+        <div class="toolbar"><button id="tabView">Vista</button><button id="tabCode">Código</button><button id="zoomOut">−</button><button id="zoomReset"><span id="zoomLabel">100%</span></button><button id="zoomIn">+</button><button id="download">Descargar</button><button id="openFolder">Abrir carpeta</button></div>
+        <iframe id="viewer"></iframe><pre id="code" hidden></pre>
+      </section>
+    </main>
+
+    <section class="bottom-widgets" data-purpose="bottom-widgets">
+      <div class="widget glass-morphism"><h4>⚙ Ajustes</h4><div class="chip-row"><button data-action="apply-api-preset" data-preset="arkea_openrouter_free">Recomendados</button><button data-action="apply-api-preset" data-preset="arkea_openrouter_cheap">APIs</button><button data-action="install-required-pack">Modelos locales</button></div><div class="mini-list"><span>nex-agi/nex-n2-pro:free <b>Visión gratis</b></span><span>qwen/qwen3-coder:free <b>Código gratis</b></span><span>deepseek/deepseek-v4-flash <b>Económico</b></span><span>stepfun/step-3.7-flash <b>Visión barata</b></span></div></div>
+      <div class="widget glass-morphism"><h4>Generación y edición de imágenes</h4><div class="tile-grid"><button data-action="open-image-api">Texto a imagen</button><button data-action="open-image-api">Edición inteligente</button><button data-action="open-image-api">Variaciones</button><button data-action="open-image-api">Mejora y upscale</button></div></div>
+      <div class="widget glass-morphism"><h4>Trabaja con tus archivos</h4><div class="file-grid"><span>Word</span><span>Excel</span><span>PPT</span><span>HTML</span></div><button id="canvasToggle" class="wide">Canvas editable</button></div>
+      <div class="widget glass-morphism"><h4>Apariencia y fondos</h4><div class="wall-row"><button data-action="bg-valley"><img src="/static/assets/arkea-wallpaper-valley.png"/></button><button data-action="bg-sky"><img src="/static/assets/arkea-wallpaper-sky.png"/></button></div><select id="quickTheme"><option value="jade">Jade Glass (verde)</option><option value="sky">Cielo Aero ARKEA</option><option value="custom">Fondo personalizado</option></select></div>
+    </section>
+
+    <footer class="taskbar glass-morphism"><button id="weatherText" class="taskbar-btn">Cargando clima...</button><button id="taskbarSearch" class="taskbar-btn">Buscar modelos</button><button id="languageToggle" class="taskbar-btn">ES · ARKEA AI</button></footer>
+  </div>
+
+  <div id="settingsModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head"><div><h2>⚙ Ajustes de ARKEA AI</h2><p>Proyectos, chats, APIS, voz, MCPs, skills, memoria, Obsidian, personaje, pantalla, cámara y apariencia.</p></div><button id="closeSettings" class="icon-btn">✕</button></div>
+      <div class="settings-layout">
+        <aside class="settings-tabs">
+          <button data-tab="workspace" class="active">📁 Proyectos y carpeta</button><button data-tab="chat">Chat actual</button><button data-tab="apis">🔑 APIS</button><button data-tab="models">🧠 Modelos locales</button><button data-tab="avatar">🤖 Personaje</button><button data-tab="skills">Skills</button><button data-tab="memory">🗂️ Memoria + Obsidian</button><button data-tab="mcp">🔌 MCP</button><button data-tab="appearance">🎨 Apariencia</button><button data-tab="diagnostics">✅ Diagnóstico</button>
+        </aside>
+        <section id="settingsContent" class="settings-content"></section>
+      </div>
+    </div>
+  </div>
+
+  <div id="onboardingModal" class="modal onboarding" hidden><div class="onboard-card liquid-card"><img class="onboard-logo" src="/static/assets/arkea-logo.png"/><h2>Bienvenido a ARKEA AI</h2><p>Escribe cómo quieres que ARKEA te llame.</p><label>Cómo debe llamarte</label><input id="onboardUserName" value="Manu" placeholder="Manu"/><label class="onboard-pack"><input type="checkbox" id="onboardInstallPack" checked/> Instalar pack mínimo gratis</label><div class="actions"><button id="finishOnboarding" class="primary">Empezar</button></div><p class="contact-line">Contacto: robertmanuchojarapeche@gmail.com · betomanuchobullicio@gmail.com</p></div></div>
+
+  <div id="screenPickerModal" class="modal" hidden><div class="modal-card screen-card"><div class="modal-head"><div><h2>🖥️ Elegir pantalla o ventana</h2><p>Selecciona una pantalla/ventana. Puedes activar vista en tiempo real.</p></div><button id="closeScreenPicker" class="icon-btn">✕</button></div><div class="screen-tools"><label><input type="checkbox" id="screenAutoAnalyze" checked/> Analizar automáticamente cada pocos segundos</label><button id="refreshScreens">Actualizar fuentes</button><button id="stopScreenLive">Detener pantalla en vivo</button></div><div id="screenSources" class="screen-sources"></div></div></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

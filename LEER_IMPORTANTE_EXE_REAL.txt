@@ -1,0 +1,24 @@
+IMPORTANTE
+
+El builder ahora genera un EXE portable real:
+
+  release\ARKEA-AI-PORTABLE-FINAL.exe
+
+Ese es el archivo principal que debes abrir.
+
+También puede generar un setup opcional:
+
+  release\ARKEA-AI-Setup-FINAL.exe
+
+Si el setup falla o no abre, usa el portable.
+No uses archivos __uninstaller-nsis*.exe.
+
+Auto instalación al abrir ARKEA AI:
+- Detecta Ollama.
+- Si no existe, ejecuta el OllamaSetup.exe incluido en el paquete.
+- Si existe, intenta iniciar ollama serve.
+- Prepara faster-whisper tiny para voz.
+- Descarga pack mínimo de pocos recursos: gemma3:270m, qwen2.5-coder:0.5b, moondream:latest y nomic-embed-text.
+- Instala una skill local Gemma Dev Agent inspirada en google-gemma/gemma-skills.
+
+La primera descarga necesita internet. Luego los modelos quedan locales.
