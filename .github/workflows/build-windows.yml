@@ -3,27 +3,92 @@ name: Build Windows Installer
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arkea-windows-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-windows:
     runs-on: windows-latest
+    timeout-minutes: 180
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Setup Python
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar rutas largas de Git
+        shell: pwsh
+        run: git config --system core.longpaths true
+
+      - name: Configurar Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Build ARKEA AI installer
+          python-version: "3.11"
+          architecture: "x64"
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          architecture: "x64"
+
+      - name: Verificar archivos necesarios
         shell: pwsh
         run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File .\build_windows_installer.ps1
-      - name: Upload installer
+          $ErrorActionPreference = "Stop"
+          if (!(Test-Path ".\build_windows_installer.ps1")) {
+            throw "Falta build_windows_installer.ps1 en la raíz del repositorio."
+          }
+          if (!(Test-Path ".\arkea_ai_desktop_odysseus_overlay")) {
+            throw "Falta la carpeta arkea_ai_desktop_odysseus_overlay."
+          }
+          if (!(Test-Path ".\arkea_ai_desktop_odysseus_overlay\patch_into_odysseus.py")) {
+            throw "Falta patch_into_odysseus.py dentro del overlay."
+          }
+          Write-Host "Archivos principales encontrados correctamente."
+
+      - name: Construir ARKEA AI para Windows
+        shell: pwsh
+        run: |
+          pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\build_windows_installer.ps1
+
+      - name: Mostrar contenido de release
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path ".\release") {
+            Get-ChildItem ".\release" -Recurse -Force |
+              Select-Object FullName, Length, LastWriteTime |
+              Format-Table -AutoSize |
+              Out-String |
+              Write-Host
+          } else {
+            Write-Host "No existe la carpeta release."
+          }
+
+      - name: Subir ARKEA AI para Windows
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ARKEA-AI-Windows-Installer
-          path: release/*.exe
+          name: ARKEA-AI-Windows-x64
+          path: release/**
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+      - name: Subir logs de diagnóstico
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ARKEA-AI-build-logs-${{ github.run_number }}
+          path: |
+            _work/**/*.log
+            release/build-logs/**
+          if-no-files-found: warn
+          retention-days: 14

@@ -32,6 +32,115 @@ function Show-Log-Tail($Path, $N=160) {
   }
 }
 
+function ConvertTo-NativeArgumentString {
+  param([string[]]$Arguments)
+
+  $quoted = foreach ($argValue in $Arguments) {
+    $arg = [string]$argValue
+    if ($arg.Length -eq 0) {
+      '""'
+    } elseif ($arg -notmatch '[\s"]') {
+      $arg
+    } else {
+      # Suficiente para rutas y argumentos usados por este builder.
+      '"' + ($arg -replace '"', '\\"') + '"'
+    }
+  }
+  return ($quoted -join ' ')
+}
+
+function Invoke-NativeLogged {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory=$true)][string]$FilePath,
+    [string[]]$Arguments = @(),
+    [string]$WorkingDirectory = "",
+    [string]$LogPath = "",
+    [switch]$AllowFailure
+  )
+
+  if ([string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+    $WorkingDirectory = (Get-Location).Path
+  }
+  if ([string]::IsNullOrWhiteSpace($LogPath)) {
+    $safeName = [IO.Path]::GetFileNameWithoutExtension($FilePath)
+    $LogPath = Join-Path $Work ("native-" + $safeName + ".log")
+  }
+
+  $logParent = Split-Path -Parent $LogPath
+  if ($logParent) { New-Item -ItemType Directory -Force -Path $logParent | Out-Null }
+  if (Test-Path $LogPath) { Remove-Item $LogPath -Force }
+
+  $resolved = Get-Command $FilePath -ErrorAction SilentlyContinue
+  if (-not $resolved) { throw "No se encontró el comando: $FilePath" }
+  $resolvedPath = if ($resolved.Source) { $resolved.Source } else { $resolved.Path }
+  if (-not $resolvedPath) { $resolvedPath = $FilePath }
+
+  Write-Host "Ejecutando: $resolvedPath $($Arguments -join ' ')" -ForegroundColor DarkGray
+
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $extension = [IO.Path]::GetExtension($resolvedPath).ToLowerInvariant()
+
+  if ($extension -eq '.cmd' -or $extension -eq '.bat') {
+    $psi.FileName = $env:ComSpec
+    $commandLine = (ConvertTo-NativeArgumentString (@($resolvedPath) + $Arguments))
+    $cmdArgs = @('/d', '/s', '/c', $commandLine)
+    if ($psi.PSObject.Properties.Name -contains 'ArgumentList') {
+      foreach ($a in $cmdArgs) { [void]$psi.ArgumentList.Add([string]$a) }
+    } else {
+      $psi.Arguments = ConvertTo-NativeArgumentString $cmdArgs
+    }
+  } else {
+    $psi.FileName = $resolvedPath
+    if ($psi.PSObject.Properties.Name -contains 'ArgumentList') {
+      foreach ($a in $Arguments) { [void]$psi.ArgumentList.Add([string]$a) }
+    } else {
+      $psi.Arguments = ConvertTo-NativeArgumentString $Arguments
+    }
+  }
+
+  $psi.WorkingDirectory = $WorkingDirectory
+  $psi.UseShellExecute = $false
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError = $true
+  $psi.CreateNoWindow = $true
+
+  $process = New-Object System.Diagnostics.Process
+  $process.StartInfo = $psi
+
+  try {
+    [void]$process.Start()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    $process.WaitForExit()
+    $stdout = $stdoutTask.GetAwaiter().GetResult()
+    $stderr = $stderrTask.GetAwaiter().GetResult()
+    $exitCode = $process.ExitCode
+  } finally {
+    $process.Dispose()
+  }
+
+  $combined = @()
+  if (-not [string]::IsNullOrWhiteSpace($stdout)) { $combined += $stdout.TrimEnd() }
+  if (-not [string]::IsNullOrWhiteSpace($stderr)) { $combined += $stderr.TrimEnd() }
+  $combinedText = ($combined -join [Environment]::NewLine)
+
+  if (-not [string]::IsNullOrWhiteSpace($combinedText)) {
+    Write-Host $combinedText
+    [IO.File]::WriteAllText($LogPath, $combinedText, (New-Object System.Text.UTF8Encoding($false)))
+  } else {
+    [IO.File]::WriteAllText($LogPath, "", (New-Object System.Text.UTF8Encoding($false)))
+  }
+
+  if ($exitCode -ne 0 -and -not $AllowFailure) {
+    Write-Host "El comando terminó con código $exitCode" -ForegroundColor Red
+    Show-Log-Tail $LogPath 220
+    throw "Falló el comando: $resolvedPath (código $exitCode). Revisa: $LogPath"
+  }
+
+  return [int]$exitCode
+}
+
 function Start-Backend-Test($ExePath, $Cwd, $Port, $LogDir) {
   New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
   $outLog = Join-Path $LogDir "backend-test-out.log"
@@ -93,26 +202,72 @@ New-Item -ItemType Directory -Force -Path $Work | Out-Null
 New-Item -ItemType Directory -Force -Path $Release | Out-Null
 
 Write-Host "[1/9] Clonando Odysseus..." -ForegroundColor Green
-git clone https://github.com/pewdiepie-archdaemon/odysseus.git $Ody
+Invoke-NativeLogged -FilePath "git" -Arguments @(
+  "clone", "--depth", "1",
+  "https://github.com/pewdiepie-archdaemon/odysseus.git",
+  $Ody
+) -WorkingDirectory $Root -LogPath (Join-Path $Work "01-git-clone.log") | Out-Null
 
 Write-Host "[2/9] Aplicando overlay ARKEA encima de Odysseus..." -ForegroundColor Green
-python (Join-Path $Overlay "patch_into_odysseus.py") --odysseus $Ody
+$PatchScript = Join-Path $Overlay "patch_into_odysseus.py"
+if (-not (Test-Path $PatchScript)) { throw "No existe el overlay: $PatchScript" }
+Invoke-NativeLogged -FilePath "python" -Arguments @(
+  $PatchScript, "--odysseus", $Ody
+) -WorkingDirectory $Root -LogPath (Join-Path $Work "02-overlay.log") | Out-Null
+
+if (-not (Test-Path (Join-Path $Ody "start_arkea.py"))) {
+  throw "El overlay no dejó start_arkea.py dentro de Odysseus."
+}
+if (-not (Test-Path (Join-Path $Ody "backend"))) {
+  throw "El overlay no dejó la carpeta backend dentro de Odysseus."
+}
 
 Write-Host "[3/9] Creando entorno Python..." -ForegroundColor Green
-Set-Location $Ody
-python -m venv .venv
-& ".\.venv\Scripts\python.exe" -m pip install --upgrade pip setuptools wheel
+Invoke-NativeLogged -FilePath "python" -Arguments @(
+  "-m", "venv", ".venv"
+) -WorkingDirectory $Ody -LogPath (Join-Path $Work "03-venv.log") | Out-Null
 
-if (Test-Path ".\ARKEA_requirements.txt") {
-  & ".\.venv\Scripts\python.exe" -m pip install -r ".\ARKEA_requirements.txt"
-} elseif (Test-Path ".\requirements.txt") {
-  & ".\.venv\Scripts\python.exe" -m pip install -r ".\requirements.txt"
+$VenvPython = Join-Path $Ody ".venv\Scripts\python.exe"
+if (-not (Test-Path $VenvPython)) { throw "No se creó Python virtual: $VenvPython" }
+
+Invoke-NativeLogged -FilePath $VenvPython -Arguments @(
+  "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"
+) -WorkingDirectory $Ody -LogPath (Join-Path $Work "04-pip-bootstrap.log") | Out-Null
+
+$Requirements = $null
+if (Test-Path (Join-Path $Ody "ARKEA_requirements.txt")) {
+  $Requirements = Join-Path $Ody "ARKEA_requirements.txt"
+} elseif (Test-Path (Join-Path $Ody "requirements.txt")) {
+  $Requirements = Join-Path $Ody "requirements.txt"
 }
-& ".\.venv\Scripts\python.exe" -m pip install pyinstaller
+
+if ($Requirements) {
+  Invoke-NativeLogged -FilePath $VenvPython -Arguments @(
+    "-m", "pip", "install", "-r", $Requirements
+  ) -WorkingDirectory $Ody -LogPath (Join-Path $Work "05-pip-requirements.log") | Out-Null
+}
+
+Invoke-NativeLogged -FilePath $VenvPython -Arguments @(
+  "-m", "pip", "install", "pyinstaller==6.20.0"
+) -WorkingDirectory $Ody -LogPath (Join-Path $Work "06-pip-pyinstaller.log") | Out-Null
 
 Write-Host "[4/9] Compilando backend Python como arkea-backend.exe..." -ForegroundColor Green
+$BackendDistRoot = Join-Path $Ody "dist"
+$BackendBuildRoot = Join-Path $Ody "build"
+$BackendSpec = Join-Path $Ody "arkea-backend.spec"
+if (Test-Path $BackendDistRoot) { Remove-Item $BackendDistRoot -Recurse -Force }
+if (Test-Path $BackendBuildRoot) { Remove-Item $BackendBuildRoot -Recurse -Force }
+if (Test-Path $BackendSpec) { Remove-Item $BackendSpec -Force }
+New-Item -ItemType Directory -Force -Path $BackendDistRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $BackendBuildRoot | Out-Null
+
 $PyInstallerArgs = @(
-  "--clean", "--noconfirm", "--onedir", "--name", "arkea-backend",
+  "-m", "PyInstaller",
+  "--clean", "--noconfirm", "--onedir",
+  "--name", "arkea-backend",
+  "--distpath", $BackendDistRoot,
+  "--workpath", $BackendBuildRoot,
+  "--specpath", $Ody,
   "--add-data", "backend;backend",
   "--add-data", "frontend;frontend",
   "--add-data", "data;data",
@@ -145,11 +300,31 @@ $PyInstallerArgs = @(
   "--hidden-import", "psutil",
   "start_arkea.py"
 )
-& ".\.venv\Scripts\python.exe" -m PyInstaller @PyInstallerArgs
 
-Write-Host "[5/9] Probando backend compilado antes de crear el instalador..." -ForegroundColor Green
-$CompiledExe = Join-Path $Ody "dist\arkea-backend\arkea-backend.exe"
-if (-not (Test-Path $CompiledExe)) { throw "No se encontró backend compilado: $CompiledExe" }
+Invoke-NativeLogged -FilePath $VenvPython -Arguments $PyInstallerArgs `
+  -WorkingDirectory $Ody -LogPath (Join-Path $Work "07-pyinstaller.log") | Out-Null
+
+$CompiledExe = Join-Path $BackendDistRoot "arkea-backend\arkea-backend.exe"
+if (-not (Test-Path $CompiledExe)) {
+  $BackendCandidate = Get-ChildItem -Path $BackendDistRoot -Filter "arkea-backend.exe" -Recurse -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+  if ($BackendCandidate) { $CompiledExe = $BackendCandidate.FullName }
+}
+
+if (-not (Test-Path $CompiledExe)) {
+  Write-Host "Contenido de dist después de PyInstaller:" -ForegroundColor Yellow
+  Get-ChildItem -Path $BackendDistRoot -Recurse -Force -ErrorAction SilentlyContinue |
+    Select-Object FullName, Length, LastWriteTime |
+    Format-Table -AutoSize |
+    Out-String |
+    Write-Host
+  Show-Log-Tail (Join-Path $Work "07-pyinstaller.log") 260
+  throw "PyInstaller terminó sin crear arkea-backend.exe."
+}
+
+Write-Host "Backend generado en: $CompiledExe" -ForegroundColor Green
+
+Write-Host "[5/9] Probando backend compilado antes de crear la app..." -ForegroundColor Green
 Start-Backend-Test -ExePath $CompiledExe -Cwd (Split-Path -Parent $CompiledExe) -Port 7219 -LogDir (Join-Path $Work "backend_test_logs")
 
 Write-Host "[6/9] Preparando Electron Desktop..." -ForegroundColor Green
@@ -158,7 +333,10 @@ New-Item -ItemType Directory -Force -Path $Desktop | Out-Null
 $BackendDist = Join-Path $Desktop "backend-dist"
 if (Test-Path $BackendDist) { Remove-Item $BackendDist -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $BackendDist | Out-Null
-Copy-Item -Path (Join-Path $Ody "dist\arkea-backend") -Destination $BackendDist -Recurse -Force
+$CompiledBackendDir = Split-Path -Parent $CompiledExe
+$BackendTargetDir = Join-Path $BackendDist "arkea-backend"
+New-Item -ItemType Directory -Force -Path $BackendTargetDir | Out-Null
+Copy-Item -Path (Join-Path $CompiledBackendDir "*") -Destination $BackendTargetDir -Recurse -Force
 
 $AssetsDir = Join-Path $Desktop "assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
@@ -487,20 +665,22 @@ $PackageJson = @'
 {
   "name": "arkea-ai",
   "version": "1.0.0",
-  "description": "ARKEA AI final ejecutable unpacked estable",
+  "description": "ARKEA AI para Windows",
   "main": "main.js",
-  "author": "ARKEA",
+  "author": "Arkeai AI Roberto Manuel Jara Peche",
   "license": "MIT",
   "scripts": {
-    "dist:dir": "electron-builder --win --x64 --dir"
+    "dist:dir": "electron-builder --win --x64 --dir --publish never",
+    "dist:nsis": "electron-builder --win nsis --x64 --publish never"
   },
   "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
   },
   "build": {
     "appId": "com.arkea.ai",
     "productName": "ARKEA AI",
+    "artifactName": "ARKEA-AI-Setup-${version}-${arch}.${ext}",
     "asar": true,
     "files": [
       "main.js",
@@ -514,7 +694,18 @@ $PackageJson = @'
     ],
     "directories": { "output": "dist" },
     "win": {
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ARKEA AI",
+      "deleteAppDataOnUninstall": false
     }
   }
 }
@@ -522,10 +713,11 @@ $PackageJson = @'
 Write-Utf8NoBom (Join-Path $Desktop "package.json") $PackageJson
 
 Write-Host "[7/9] Instalando dependencias Electron..." -ForegroundColor Green
-Set-Location $Desktop
-npm.cmd install
+Invoke-NativeLogged -FilePath "npm.cmd" -Arguments @(
+  "install", "--no-audit", "--no-fund"
+) -WorkingDirectory $Desktop -LogPath (Join-Path $Work "08-npm-install.log") | Out-Null
 
-Write-Host "[8/9] Construyendo app Windows unpacked estable..." -ForegroundColor Green
+Write-Host "[8/9] Construyendo ARKEA AI para Windows..." -ForegroundColor Green
 $ElectronBuilder = Join-Path $Desktop "node_modules\.bin\electron-builder.cmd"
 if (-not (Test-Path $ElectronBuilder)) { throw "No se encontró electron-builder local: $ElectronBuilder" }
 
@@ -533,21 +725,20 @@ $Dist = Join-Path $Desktop "dist"
 if (Test-Path $Dist) { Remove-Item $Dist -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $Dist | Out-Null
 
-# IMPORTANTE:
-# Ya NO se usa target portable ni NSIS porque en tu PC falló con macros x64_app_files.
-# Se usa --dir para generar una carpeta ejecutable real: win-unpacked\ARKEA AI.exe
-& $ElectronBuilder --win --x64 --dir
-if ($LASTEXITCODE -ne 0) { throw "Falló la construcción unpacked estable (--dir). Revisa el log anterior de electron-builder." }
-
-Write-Host "[9/9] Copiando app ejecutable estable a release..." -ForegroundColor Green
-if (Test-Path $Release) { Get-ChildItem -Path $Release -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }
-New-Item -ItemType Directory -Force -Path $Release | Out-Null
+# Primero se construye la app unpacked. Esta es la salida de respaldo y debe existir.
+Invoke-NativeLogged -FilePath $ElectronBuilder -Arguments @(
+  "--win", "--x64", "--dir", "--publish", "never"
+) -WorkingDirectory $Desktop -LogPath (Join-Path $Work "09-electron-dir.log") | Out-Null
 
 $WinUnpacked = Join-Path $Dist "win-unpacked"
 if (-not (Test-Path $WinUnpacked)) {
-  Write-Host "No se encontró win-unpacked. Contenido de dist:" -ForegroundColor Red
-  Get-ChildItem -Path $Dist -Force | Select-Object Name,Length,LastWriteTime | Format-Table
-  throw "No se creó dist\win-unpacked"
+  Write-Host "Contenido de dist:" -ForegroundColor Red
+  Get-ChildItem -Path $Dist -Recurse -Force -ErrorAction SilentlyContinue |
+    Select-Object FullName, Length |
+    Format-Table -AutoSize |
+    Out-String |
+    Write-Host
+  throw "Electron Builder no creó dist\win-unpacked."
 }
 
 $AppExe = Get-ChildItem -Path $WinUnpacked -Filter "*.exe" -ErrorAction SilentlyContinue |
@@ -556,43 +747,79 @@ $AppExe = Get-ChildItem -Path $WinUnpacked -Filter "*.exe" -ErrorAction Silently
   Select-Object -First 1
 
 if (-not $AppExe) {
-  Get-ChildItem -Path $WinUnpacked -Force | Select-Object Name,Length,LastWriteTime | Format-Table
-  throw "No se encontró el EXE real dentro de win-unpacked"
+  throw "No se encontró el ejecutable principal dentro de win-unpacked."
 }
+
+# Después se intenta crear el instalador NSIS. Si NSIS falla, la build no se pierde:
+# GitHub entregará la carpeta ejecutable y un ZIP portable.
+$NsisExit = Invoke-NativeLogged -FilePath $ElectronBuilder -Arguments @(
+  "--win", "nsis", "--x64", "--publish", "never"
+) -WorkingDirectory $Desktop -LogPath (Join-Path $Work "10-electron-nsis.log") -AllowFailure
+
+Write-Host "[9/9] Preparando archivos finales en release..." -ForegroundColor Green
+if (Test-Path $Release) {
+  Get-ChildItem -Path $Release -Force -ErrorAction SilentlyContinue |
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+}
+New-Item -ItemType Directory -Force -Path $Release | Out-Null
 
 $FinalAppDir = Join-Path $Release "ARKEA-AI-APP"
 Copy-Item -Path $WinUnpacked -Destination $FinalAppDir -Recurse -Force
-
 $FinalExe = Join-Path $FinalAppDir $AppExe.Name
-$Launcher = Join-Path $Release "ABRIR_ARKEA_AI.bat"
-$ExeName = $AppExe.Name
+
 $LauncherContent = @"
 @echo off
 set "APPDIR=%~dp0ARKEA-AI-APP"
 cd /d "%APPDIR%"
-start "ARKEA AI" "%APPDIR%\$ExeName"
+start "ARKEA AI" "%APPDIR%\\$($AppExe.Name)"
 "@
-Write-Utf8NoBom $Launcher $LauncherContent
+Write-Utf8NoBom (Join-Path $Release "ABRIR_ARKEA_AI.cmd") $LauncherContent
+Write-Utf8NoBom (Join-Path $Release "ABRIR_ARKEA_AI.bat") $LauncherContent
 
-$LauncherCmd = Join-Path $Release "ABRIR_ARKEA_AI.cmd"
-Write-Utf8NoBom $LauncherCmd $LauncherContent
+$InstallerCandidates = Get-ChildItem -Path $Dist -Filter "*.exe" -File -ErrorAction SilentlyContinue |
+  Where-Object { $_.Name -notmatch "(?i)uninstall|uninstaller" } |
+  Sort-Object Length -Descending
 
-$ReadMeRun = Join-Path $Release "LEER_PARA_ABRIR.txt"
+$Installer = $InstallerCandidates | Select-Object -First 1
+if ($Installer -and $NsisExit -eq 0) {
+  $InstallerDestination = Join-Path $Release $Installer.Name
+  Copy-Item -Path $Installer.FullName -Destination $InstallerDestination -Force
+  Write-Host "Instalador NSIS creado: $InstallerDestination" -ForegroundColor Green
+} else {
+  Write-Host "NSIS no se pudo crear. Se entrega la app portable completa, que sí es ejecutable." -ForegroundColor Yellow
+  Show-Log-Tail (Join-Path $Work "10-electron-nsis.log") 120
+}
+
+$PortableZip = Join-Path $Release "ARKEA-AI-Windows-x64-portable.zip"
+if (Test-Path $PortableZip) { Remove-Item $PortableZip -Force }
+Compress-Archive -Path (Join-Path $FinalAppDir "*") -DestinationPath $PortableZip -CompressionLevel Optimal
+
 $ReadMeRunContent = @"
-ARKEA AI se generó como APP ejecutable estable, no como instalador.
+ARKEA AI PARA WINDOWS
 
-ABRE UNO DE ESTOS:
-1) release\ABRIR_ARKEA_AI.bat o release\ABRIR_ARKEA_AI.cmd
-2) release\ARKEA-AI-APP\$($AppExe.Name)
+OPCIÓN 1 — INSTALADOR:
+Si existe un archivo ARKEA-AI-Setup-*.exe en esta carpeta, ábrelo.
 
-NO muevas solo el .exe. Debe quedarse junto con la carpeta ARKEA-AI-APP porque ahí están Electron, backend, recursos y OllamaSetup.
+OPCIÓN 2 — PORTABLE:
+Abre ABRIR_ARKEA_AI.cmd o entra en ARKEA-AI-APP y abre $($AppExe.Name).
+No muevas únicamente el EXE fuera de ARKEA-AI-APP.
+
+El ZIP ARKEA-AI-Windows-x64-portable.zip contiene la versión portable completa.
 "@
-Write-Utf8NoBom $ReadMeRun $ReadMeRunContent
+Write-Utf8NoBom (Join-Path $Release "LEER_PARA_ABRIR.txt") $ReadMeRunContent
+
+# Copiar logs útiles para diagnosticar cualquier futura incidencia.
+$LogsRelease = Join-Path $Release "build-logs"
+New-Item -ItemType Directory -Force -Path $LogsRelease | Out-Null
+Get-ChildItem -Path $Work -Filter "*.log" -File -ErrorAction SilentlyContinue |
+  ForEach-Object { Copy-Item $_.FullName -Destination $LogsRelease -Force }
 
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "LISTO. App ejecutable estable creada:" -ForegroundColor Green
-Write-Host $FinalExe -ForegroundColor Yellow
-Write-Host "También puedes abrir:" -ForegroundColor Green
-Write-Host $Launcher -ForegroundColor Yellow
-Write-Host "NO abras archivos __uninstaller. Ya no se usa portable/NSIS." -ForegroundColor Yellow
+Write-Host "BUILD COMPLETADA." -ForegroundColor Green
+Write-Host "App portable: $FinalExe" -ForegroundColor Yellow
+Write-Host "ZIP portable: $PortableZip" -ForegroundColor Yellow
+if ($Installer -and $NsisExit -eq 0) {
+  Write-Host "Instalador: $(Join-Path $Release $Installer.Name)" -ForegroundColor Yellow
+}
+Write-Host "GitHub Actions debe subir toda la carpeta release como artifact." -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Cyan

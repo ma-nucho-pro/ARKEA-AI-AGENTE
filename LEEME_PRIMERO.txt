@@ -1,0 +1,18 @@
+ARKEA AI - PROYECTO COMPLETO PARA GITHUB
+
+Autor: Roberto Manuel Jara Peche
+Crédito: by: Arkeai AI Roberto Manuel Jara Peche
+
+PARA SUBIR A GITHUB:
+1. Extrae este ZIP.
+2. Abre la carpeta ARKEA-AI-AGENTE.
+3. Sube TODO lo que está dentro a la raíz de tu repositorio.
+4. Debes ver .github, arkea_ai_desktop_odysseus_overlay y build_windows_installer.ps1 directamente en la raíz.
+
+PARA CREAR EL EXE EN GITHUB:
+Actions > Build Windows Installer > Run workflow.
+
+PARA CREAR EL EXE EN TU PC:
+Ejecuta CREAR_EXE_ARKEA_AI.cmd.
+
+No publiques archivos .env con claves reales.
