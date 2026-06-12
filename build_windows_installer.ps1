@@ -77,10 +77,10 @@ function Start-Backend-Test($ExePath, $Cwd, $Port, $LogDir) {
   if (-not $p.HasExited) { $p.Kill() | Out-Null }
   Start-Sleep -Milliseconds 500
 
-  Write-Host "El backend compilado NO inició. Logs:" -ForegroundColor Red
+  Write-Host "El backend compilado NO iniciÃ³. Logs:" -ForegroundColor Red
   Show-Log-Tail $outLog
   Show-Log-Tail $errLog
-  throw "Backend compilado no pasó la prueba de /api/health"
+  throw "Backend compilado no pasÃ³ la prueba de /api/health"
 }
 
 Need-Cmd git "Instala Git para Windows: https://git-scm.com/download/win"
@@ -148,9 +148,47 @@ $PyInstallerArgs = @(
 & ".\.venv\Scripts\python.exe" -m PyInstaller @PyInstallerArgs
 
 Write-Host "[5/9] Probando backend compilado antes de crear el instalador..." -ForegroundColor Green
-$CompiledExe = Join-Path $Ody "dist\arkea-backend\arkea-backend.exe"
-if (-not (Test-Path $CompiledExe)) { throw "No se encontró backend compilado: $CompiledExe" }
-Start-Backend-Test -ExePath $CompiledExe -Cwd (Split-Path -Parent $CompiledExe) -Port 7219 -LogDir (Join-Path $Work "backend_test_logs")
+
+# En tu PC puede existir exactamente esta ruta, pero en GitHub Actions el bundle de PyInstaller
+# puede quedar en otra ruta dentro de dist. Por eso se busca de forma robusta.
+$DistRoot = Join-Path $Ody "dist"
+$ExpectedBackendDir = Join-Path $DistRoot "arkea-backend"
+$ExpectedBackendExe = Join-Path $ExpectedBackendDir "arkea-backend.exe"
+$CompiledExe = $ExpectedBackendExe
+
+if (-not (Test-Path $CompiledExe)) {
+  Write-Host "No se encontrÃ³ backend en ruta fija. Buscando arkea-backend.exe dentro de dist..." -ForegroundColor Yellow
+
+  $BackendCandidate = $null
+  if (Test-Path $DistRoot) {
+    $BackendCandidate = Get-ChildItem -Path $DistRoot -Filter "arkea-backend.exe" -Recurse -ErrorAction SilentlyContinue |
+      Select-Object -First 1
+  }
+
+  if ($BackendCandidate) {
+    $CompiledExe = $BackendCandidate.FullName
+    Write-Host "Backend encontrado en: $CompiledExe" -ForegroundColor Green
+  }
+}
+
+if (-not (Test-Path $CompiledExe)) {
+  Write-Host "Contenido encontrado dentro de dist:" -ForegroundColor Yellow
+  if (Test-Path $DistRoot) {
+    Get-ChildItem -Path $DistRoot -Recurse -ErrorAction SilentlyContinue |
+      Select-Object FullName, Length, LastWriteTime |
+      Format-Table -AutoSize |
+      Out-String |
+      Write-Host
+  } else {
+    Write-Host "No existe la carpeta dist: $DistRoot" -ForegroundColor Red
+  }
+  throw "No se encontrÃ³ arkea-backend.exe dentro de dist. PyInstaller no generÃ³ el backend esperado."
+}
+
+$CompiledBackendDir = Split-Path -Parent $CompiledExe
+Write-Host "Backend bundle usado: $CompiledBackendDir" -ForegroundColor Green
+
+Start-Backend-Test -ExePath $CompiledExe -Cwd $CompiledBackendDir -Port 7219 -LogDir (Join-Path $Work "backend_test_logs")
 
 Write-Host "[6/9] Preparando Electron Desktop..." -ForegroundColor Green
 $Desktop = Join-Path $Ody "desktop"
@@ -158,7 +196,23 @@ New-Item -ItemType Directory -Force -Path $Desktop | Out-Null
 $BackendDist = Join-Path $Desktop "backend-dist"
 if (Test-Path $BackendDist) { Remove-Item $BackendDist -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $BackendDist | Out-Null
-Copy-Item -Path (Join-Path $Ody "dist\arkea-backend") -Destination $BackendDist -Recurse -Force
+
+# main.js espera esta ruta fija:
+# backend-dist\arkea-backend\arkea-backend.exe
+# Por eso copiamos el bundle real encontrado a esa carpeta normalizada.
+$BackendNormalizedDir = Join-Path $BackendDist "arkea-backend"
+New-Item -ItemType Directory -Force -Path $BackendNormalizedDir | Out-Null
+Copy-Item -Path (Join-Path $CompiledBackendDir "*") -Destination $BackendNormalizedDir -Recurse -Force
+
+if (-not (Test-Path (Join-Path $BackendNormalizedDir "arkea-backend.exe"))) {
+  Write-Host "Contenido copiado a backend-dist:" -ForegroundColor Yellow
+  Get-ChildItem -Path $BackendNormalizedDir -Recurse -ErrorAction SilentlyContinue |
+    Select-Object FullName, Length |
+    Format-Table -AutoSize |
+    Out-String |
+    Write-Host
+  throw "No se copiÃ³ arkea-backend.exe a backend-dist\arkea-backend"
+}
 
 $AssetsDir = Join-Path $Desktop "assets"
 New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
@@ -172,7 +226,7 @@ try {
   Write-Host "Descargando instalador oficial de Ollama para incluirlo en el instalador de ARKEA..." -ForegroundColor Green
   Invoke-WebRequest -Uri "https://ollama.com/download/OllamaSetup.exe" -OutFile $OllamaSetup -UseBasicParsing -TimeoutSec 120
 } catch {
-  Write-Host "No se pudo incluir OllamaSetup.exe. La app abrirá el enlace oficial si hace falta." -ForegroundColor Yellow
+  Write-Host "No se pudo incluir OllamaSetup.exe. La app abrirÃ¡ el enlace oficial si hace falta." -ForegroundColor Yellow
 }
 
 if (Test-Path $OllamaSetup) { Copy-Item -Path $OllamaSetup -Destination (Join-Path $AssetsDir "OllamaSetup.exe") -Force }
@@ -294,11 +348,11 @@ async function installBundledOllamaInternal() {
   if (installer) {
     logBootstrap('ejecutando instalador incluido de Ollama: ' + installer);
     try {
-      // Intento silencioso. Si el instalador no acepta /S, Windows lo abrirá normal.
+      // Intento silencioso. Si el instalador no acepta /S, Windows lo abrirÃ¡ normal.
       spawn(installer, ['/S'], {detached:true, stdio:'ignore', windowsHide:false}).unref();
       return {ok:true, installer};
     } catch(e) {
-      logBootstrap('falló /S, abriendo instalador normal: ' + e.message);
+      logBootstrap('fallÃ³ /S, abriendo instalador normal: ' + e.message);
       spawn(installer, [], {detached:true, stdio:'ignore', windowsHide:false}).unref();
       return {ok:true, installer, normal:true};
     }
@@ -322,7 +376,7 @@ function wireDesktopApis() {
     return { canceled: r.canceled, path: r.filePaths?.[0] || '' };
   });
   ipcMain.handle('arkea:select-image', async () => {
-    const r = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'Imágenes', extensions: ['png','jpg','jpeg','webp','gif','svg'] }] });
+    const r = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'ImÃ¡genes', extensions: ['png','jpg','jpeg','webp','gif','svg'] }] });
     if (r.canceled || !r.filePaths?.[0]) return { canceled: true };
     const p = r.filePaths[0];
     const ext = path.extname(p).slice(1).toLowerCase() || 'png';
@@ -395,7 +449,7 @@ function waitForServer(url, timeoutMs = 60000) {
     const tick = () => {
       http.get(url, res => { res.resume(); resolve(true); })
         .on('error', () => {
-          if (Date.now() - start > timeoutMs) reject(new Error('Backend no inició a tiempo'));
+          if (Date.now() - start > timeoutMs) reject(new Error('Backend no iniciÃ³ a tiempo'));
           else setTimeout(tick, 650);
         });
     };
@@ -527,17 +581,17 @@ npm.cmd install
 
 Write-Host "[8/9] Construyendo app Windows unpacked estable..." -ForegroundColor Green
 $ElectronBuilder = Join-Path $Desktop "node_modules\.bin\electron-builder.cmd"
-if (-not (Test-Path $ElectronBuilder)) { throw "No se encontró electron-builder local: $ElectronBuilder" }
+if (-not (Test-Path $ElectronBuilder)) { throw "No se encontrÃ³ electron-builder local: $ElectronBuilder" }
 
 $Dist = Join-Path $Desktop "dist"
 if (Test-Path $Dist) { Remove-Item $Dist -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $Dist | Out-Null
 
 # IMPORTANTE:
-# Ya NO se usa target portable ni NSIS porque en tu PC falló con macros x64_app_files.
+# Ya NO se usa target portable ni NSIS porque en tu PC fallÃ³ con macros x64_app_files.
 # Se usa --dir para generar una carpeta ejecutable real: win-unpacked\ARKEA AI.exe
 & $ElectronBuilder --win --x64 --dir
-if ($LASTEXITCODE -ne 0) { throw "Falló la construcción unpacked estable (--dir). Revisa el log anterior de electron-builder." }
+if ($LASTEXITCODE -ne 0) { throw "FallÃ³ la construcciÃ³n unpacked estable (--dir). Revisa el log anterior de electron-builder." }
 
 Write-Host "[9/9] Copiando app ejecutable estable a release..." -ForegroundColor Green
 if (Test-Path $Release) { Get-ChildItem -Path $Release -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }
@@ -545,9 +599,9 @@ New-Item -ItemType Directory -Force -Path $Release | Out-Null
 
 $WinUnpacked = Join-Path $Dist "win-unpacked"
 if (-not (Test-Path $WinUnpacked)) {
-  Write-Host "No se encontró win-unpacked. Contenido de dist:" -ForegroundColor Red
+  Write-Host "No se encontrÃ³ win-unpacked. Contenido de dist:" -ForegroundColor Red
   Get-ChildItem -Path $Dist -Force | Select-Object Name,Length,LastWriteTime | Format-Table
-  throw "No se creó dist\win-unpacked"
+  throw "No se creÃ³ dist\win-unpacked"
 }
 
 $AppExe = Get-ChildItem -Path $WinUnpacked -Filter "*.exe" -ErrorAction SilentlyContinue |
@@ -557,7 +611,7 @@ $AppExe = Get-ChildItem -Path $WinUnpacked -Filter "*.exe" -ErrorAction Silently
 
 if (-not $AppExe) {
   Get-ChildItem -Path $WinUnpacked -Force | Select-Object Name,Length,LastWriteTime | Format-Table
-  throw "No se encontró el EXE real dentro de win-unpacked"
+  throw "No se encontrÃ³ el EXE real dentro de win-unpacked"
 }
 
 $FinalAppDir = Join-Path $Release "ARKEA-AI-APP"
@@ -579,20 +633,20 @@ Write-Utf8NoBom $LauncherCmd $LauncherContent
 
 $ReadMeRun = Join-Path $Release "LEER_PARA_ABRIR.txt"
 $ReadMeRunContent = @"
-ARKEA AI se generó como APP ejecutable estable, no como instalador.
+ARKEA AI se generÃ³ como APP ejecutable estable, no como instalador.
 
 ABRE UNO DE ESTOS:
 1) release\ABRIR_ARKEA_AI.bat o release\ABRIR_ARKEA_AI.cmd
 2) release\ARKEA-AI-APP\$($AppExe.Name)
 
-NO muevas solo el .exe. Debe quedarse junto con la carpeta ARKEA-AI-APP porque ahí están Electron, backend, recursos y OllamaSetup.
+NO muevas solo el .exe. Debe quedarse junto con la carpeta ARKEA-AI-APP porque ahÃ­ estÃ¡n Electron, backend, recursos y OllamaSetup.
 "@
 Write-Utf8NoBom $ReadMeRun $ReadMeRunContent
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "LISTO. App ejecutable estable creada:" -ForegroundColor Green
 Write-Host $FinalExe -ForegroundColor Yellow
-Write-Host "También puedes abrir:" -ForegroundColor Green
+Write-Host "TambiÃ©n puedes abrir:" -ForegroundColor Green
 Write-Host $Launcher -ForegroundColor Yellow
 Write-Host "NO abras archivos __uninstaller. Ya no se usa portable/NSIS." -ForegroundColor Yellow
 Write-Host "============================================================" -ForegroundColor Cyan
