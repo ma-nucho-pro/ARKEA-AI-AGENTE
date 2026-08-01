@@ -1,0 +1,13 @@
+{
+  "app_name": "ARKEA AI Desktop",
+  "workspace": "./data/projects",
+  "obsidian_vault": "./data/obsidian_vault",
+  "default_model": "llama3.2:3b",
+  "image_provider": "placeholder_or_comfyui",
+  "tts_provider": "browser_or_elevenlabs",
+  "security": {
+    "confirm_before_shell": true,
+    "allow_outside_workspace": false,
+    "confirm_mcp_tools": true
+  }
+}

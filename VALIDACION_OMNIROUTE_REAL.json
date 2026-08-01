@@ -1,0 +1,43 @@
+{
+  "validated_at": "2026-07-29T22:02:00-05:00",
+  "omniroute_version": "3.8.48",
+  "installer": {
+    "name": "OmniRoute.Setup.3.8.48.exe",
+    "bytes": 317869480,
+    "sha256": "d3295cded2cc6782afaddfef8ff4d4501d09ffc3a7d2ff2acb7955f7884b1806",
+    "silent_install_exit_code": 0
+  },
+  "runtime": {
+    "test_type": "real_installed_binary_with_isolated_fresh_data",
+    "headless": true,
+    "bind_address": "127.0.0.1",
+    "port": 20128,
+    "health_status": 200,
+    "reported_version": "3.8.48",
+    "models_without_api_key_status": 401,
+    "models_with_api_key_status": 200,
+    "models_count": 99,
+    "chat_completions_with_api_key_status": 503,
+    "chat_completions_error_class": "service_unavailable",
+    "chat_completions_had_choices": false,
+    "provider_connections_in_isolated_profile": 0
+  },
+  "interpretation": {
+    "authenticated_transport_verified": true,
+    "chat_endpoint_reached": true,
+    "successful_model_completion_verified": false,
+    "reason": "La instancia aislada no tenía ninguna cuenta, OAuth ni credencial de proveedor conectada. OmniRoute rechazó la generación con 503 en lugar de fingir una respuesta.",
+    "requirement_for_successful_completion": "El usuario debe conectar en OmniRoute un proveedor con capacidad disponible."
+  },
+  "security": {
+    "require_api_key": true,
+    "unauthenticated_models_rejected": true,
+    "authenticated_models_accepted": true,
+    "https_download_only": true,
+    "release_size_and_sha256_pinned": true,
+    "lan_bind_blocked_by_host_and_hostname": true,
+    "arena_network_sync_disabled": true,
+    "production_secrets_random_and_dpapi_encrypted_at_rest": true,
+    "test_secret_disposable": true
+  }
+}

@@ -1,0 +1,46 @@
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+runtime-secrets.bin
+runtime-secrets.json
+
+# Datos de ejecución
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+data/
+logs/
+
+# Dependencias y entornos
+node_modules/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Construcciones y artefactos pesados
+_work/
+release/
+build/
+dist/
+*.exe
+*.msi
+*.zip
+*.7z
+*.blockmap
+*.log
+
+# Editores y sistema operativo
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

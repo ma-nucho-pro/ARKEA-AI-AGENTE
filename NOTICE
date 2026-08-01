@@ -1,0 +1,14 @@
+ARKEA AI OmniAgent 0.1.0
+Copyright (C) 2026 Roberto Manuel Jara Peche
+by: Arkeai AI Roberto Manuel Jara Peche
+
+This distribution includes and derives from Odysseus, pinned at commit:
+3250a4ce68ffb05e6d5023ca55c6c2189d548686
+https://github.com/pewdiepie-archdaemon/odysseus
+
+ARKEA AI OmniAgent and the Odysseus-derived source are distributed under
+GNU Affero General Public License version 3 or, where stated by the
+corresponding source headers, any later version.
+
+Third-party components retain their respective copyright notices and
+licenses. See LICENCIAS-TERCEROS.txt and SBOM-ARKEA-OMNIAGENT.json.

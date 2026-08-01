@@ -1,0 +1,42 @@
+name: Reporte de error
+description: Informa un fallo reproducible de ARKEA AI OmniAgent
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "No incluyas claves, tokens, bases de datos ni información privada."
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: Explica qué ocurrió y qué esperabas.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Pasos para reproducirlo
+      placeholder: "1. Abrir...\n2. Pulsar...\n3. Observar..."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Versión de Windows
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Registros sanitizados
+      description: Elimina credenciales y datos personales antes de pegarlos.
+      render: shell

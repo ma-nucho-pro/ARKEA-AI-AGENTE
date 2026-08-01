@@ -1,0 +1,4 @@
+ARKEA AI OmniAgent 0.1.0
+Upstream repository: https://github.com/pewdiepie-archdaemon/odysseus.git
+Pinned upstream commit: 3250a4ce68ffb05e6d5023ca55c6c2189d548686
+The source-tree directory is the exact post-overlay tree used by the builder.
