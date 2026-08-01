@@ -31,8 +31,10 @@ foreach ($asset in $Assets) {
   }
 }
 
-& gh release view $Tag --repo $Repository 2>$null | Out-Null
-if ($LASTEXITCODE -ne 0) {
+$releases = & gh release list --repo $Repository --limit 100 --json tagName | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) { throw 'No se pudo consultar la lista de Releases.' }
+$releaseExists = @($releases | Where-Object { $_.tagName -eq $Tag }).Count -gt 0
+if (-not $releaseExists) {
   $arguments = @('release', 'create', $Tag, '--repo', $Repository, '--title', "ARKEA AI OmniAgent $Tag", '--generate-notes')
   if ($Draft) { $arguments += '--draft' }
   & gh @arguments
