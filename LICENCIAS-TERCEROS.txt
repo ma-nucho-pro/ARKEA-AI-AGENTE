@@ -11,7 +11,7 @@ Fuente: https://github.com/pewdiepie-archdaemon/odysseus
 Commit fijado: 3250a4ce68ffb05e6d5023ca55c6c2189d548686
 El texto completo aplicable se entrega en LICENSE.
 
-OmniRoute 3.8.48
+OmniRoute 3.8.49
 ----------------
 Fuente: https://github.com/diegosouzapw/OmniRoute
 

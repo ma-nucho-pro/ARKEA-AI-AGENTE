@@ -1,43 +1,40 @@
 {
-  "validated_at": "2026-07-29T22:02:00-05:00",
-  "omniroute_version": "3.8.48",
+  "validated_at": "2026-08-01T23:00:00-05:00",
+  "status": "official_installer_verified_runtime_pending_visible_install",
+  "omniroute_version": "3.8.49",
   "installer": {
-    "name": "OmniRoute.Setup.3.8.48.exe",
-    "bytes": 317869480,
-    "sha256": "d3295cded2cc6782afaddfef8ff4d4501d09ffc3a7d2ff2acb7955f7884b1806",
-    "silent_install_exit_code": 0
+    "name": "OmniRoute.Setup.3.8.49.exe",
+    "bytes": 340441395,
+    "sha256": "b6f0f209d9a4df9de3a17de8f8f209f6c5dcfa774f3506c6bd2472a17e03100a",
+    "source": "https://github.com/diegosouzapw/OmniRoute/releases/download/v3.8.49/OmniRoute.Setup.3.8.49.exe",
+    "github_asset_digest_matched": true,
+    "installation_mode": "visible_official_setup"
   },
-  "runtime": {
-    "test_type": "real_installed_binary_with_isolated_fresh_data",
-    "headless": true,
+  "desktop_integration": {
+    "internal_cmd_download_removed": true,
+    "browser_download_fallback": true,
+    "downloads_folder_hash_check_before_open": true,
+    "official_install_locations_detected": true,
+    "minimum_supported_version": "3.8.49",
+    "headless_start": true,
     "bind_address": "127.0.0.1",
     "port": 20128,
-    "health_status": 200,
-    "reported_version": "3.8.48",
-    "models_without_api_key_status": 401,
-    "models_with_api_key_status": 200,
-    "models_count": 99,
-    "chat_completions_with_api_key_status": 503,
-    "chat_completions_error_class": "service_unavailable",
-    "chat_completions_had_choices": false,
-    "provider_connections_in_isolated_profile": 0
+    "early_process_exit_detection": true,
+    "stdout_stderr_logs_enabled": true,
+    "foreign_port_process_rejected": true
   },
-  "interpretation": {
-    "authenticated_transport_verified": true,
-    "chat_endpoint_reached": true,
-    "successful_model_completion_verified": false,
-    "reason": "La instancia aislada no tenía ninguna cuenta, OAuth ni credencial de proveedor conectada. OmniRoute rechazó la generación con 503 en lugar de fingir una respuesta.",
-    "requirement_for_successful_completion": "El usuario debe conectar en OmniRoute un proveedor con capacidad disponible."
+  "automated_tests": {
+    "python_tests_passed": 42,
+    "javascript_syntax_checks_passed": true,
+    "real_3_8_49_runtime_test": false,
+    "runtime_test_note": "Se ejecutará después de que el usuario complete el instalador oficial visible. La integración headless autenticada equivalente fue validada previamente con 3.8.48."
   },
   "security": {
     "require_api_key": true,
-    "unauthenticated_models_rejected": true,
-    "authenticated_models_accepted": true,
-    "https_download_only": true,
+    "https_official_release_only": true,
     "release_size_and_sha256_pinned": true,
     "lan_bind_blocked_by_host_and_hostname": true,
     "arena_network_sync_disabled": true,
-    "production_secrets_random_and_dpapi_encrypted_at_rest": true,
-    "test_secret_disposable": true
+    "production_secrets_random_and_dpapi_encrypted_at_rest": true
   }
 }

@@ -14,6 +14,8 @@ from backend.arkea_core.security import guarded_request
 
 
 DEFAULT_ORIGIN = os.getenv("OMNIROUTE_BASE_URL", "http://127.0.0.1:20128").rstrip("/")
+MINIMUM_VERSION = (3, 8, 49)
+TARGET_VERSION = ".".join(str(part) for part in MINIMUM_VERSION)
 CHAT_PATH = "/v1/chat/completions"
 IMAGE_PATH = "/v1/images/generations"
 
@@ -27,6 +29,17 @@ TASK_MODELS = {
     "web_search": "auto",
     "image_generation": "auto",
 }
+
+
+def _supported_version(value: object) -> bool:
+    parts = str(value or "").split(".")
+    if len(parts) < 3:
+        return False
+    try:
+        current = tuple(int(part.split("-", 1)[0]) for part in parts[:3])
+    except ValueError:
+        return False
+    return current >= MINIMUM_VERSION
 
 
 def _origin(value: str | None = None) -> str:
@@ -68,12 +81,15 @@ def status(timeout: float = 1.5) -> dict:
             max_response_bytes=2 * 1024 * 1024,
         )
         health_data = health.json() if health.status_code == 200 else {}
+        reported_version = health_data.get("version") if isinstance(health_data, dict) else ""
         if (
             not isinstance(health_data, dict)
             or health_data.get("status") != "healthy"
-            or health_data.get("version") != "3.8.48"
+            or not _supported_version(reported_version)
         ):
-            raise RuntimeError("La identidad o versión de OmniRoute no coincide")
+            raise RuntimeError(
+                f"La identidad o versión de OmniRoute no coincide; se requiere {TARGET_VERSION} o posterior"
+            )
         model_response = guarded_request(
             "GET",
             origin + "/v1/models",
@@ -95,7 +111,7 @@ def status(timeout: float = 1.5) -> dict:
             "base_url": origin,
             "model_count": len(models_value),
             "health_path": health_path,
-            "version": "3.8.48",
+            "version": str(reported_version),
             "authenticated": True,
         }
     except Exception as exc:
@@ -105,7 +121,7 @@ def status(timeout: float = 1.5) -> dict:
         "running": False,
         "base_url": origin,
         "model_count": 0,
-        "version": "3.8.48",
+        "version": TARGET_VERSION,
         "error": last_error or "OmniRoute no está iniciado",
     }
 

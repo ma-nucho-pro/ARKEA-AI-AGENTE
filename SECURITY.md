@@ -2,7 +2,7 @@
 
 ## Versiones cubiertas
 
-Esta política cubre ARKEA AI OmniAgent 0.1, OmniRoute 3.8.48 y Ollama
+Esta política cubre ARKEA AI OmniAgent 0.1, OmniRoute 3.8.49 y Ollama
 0.32.5 fijados por esta distribución. Una sustitución de versión requiere una
 nueva revisión de código, hashes y pruebas.
 
@@ -38,10 +38,11 @@ de datos de la aplicación.
 ## Cadena de suministro
 
 - OmniRoute y Ollama tienen versión, URL HTTPS, tamaño y SHA-256 fijados.
-- Los redireccionamientos de la descarga de OmniRoute se limitan a GitHub y sus
-  hosts de assets.
-- Solo se inicia una instalación OmniRoute marcada por ARKEA; si el ejecutable
-  cambia, debe reinstalarse.
+- OmniRoute se descarga desde su Release oficial mediante el navegador. Si el
+  archivo exacto está en `Descargas`, ARKEA valida tamaño y SHA-256 antes de
+  abrirlo; la instalación siempre usa el asistente visible del proveedor.
+- Solo se inicia un ejecutable OmniRoute encontrado en ubicaciones de instalación
+  conocidas y con versión 3.8.49 o posterior compatible.
 - Python y npm se fijan en lockfiles.
 - `SBOM-ARKEA-OMNIAGENT.json` inventaría ambos lockfiles y los sidecars.
 - `SHA256SUMS.txt` permite verificar cada artefacto final.

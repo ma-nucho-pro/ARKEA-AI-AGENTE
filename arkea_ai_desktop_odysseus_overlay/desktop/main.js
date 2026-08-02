@@ -2,7 +2,6 @@ const { app, BrowserWindow, dialog, shell, ipcMain, session, desktopCapturer, sa
 const { spawn, execFile } = require('child_process');
 const path = require('path');
 const http = require('http');
-const https = require('https');
 const fs = require('fs');
 const crypto = require('crypto');
 const {shouldAttachArkeaToken} = require('./request_auth');
@@ -13,11 +12,11 @@ const PORT = 20000 + crypto.randomInt(30000);
 const TRUSTED_ORIGIN = `http://127.0.0.1:${PORT}`;
 const API_TOKEN = crypto.randomBytes(32).toString('base64url');
 const OMNIROUTE = Object.freeze({
-  version: '3.8.48',
+  version: '3.8.49',
   port: 20128,
-  url: 'https://github.com/diegosouzapw/OmniRoute/releases/download/v3.8.48/OmniRoute.Setup.3.8.48.exe',
-  sha256: 'd3295cded2cc6782afaddfef8ff4d4501d09ffc3a7d2ff2acb7955f7884b1806',
-  size: 317869480
+  url: 'https://github.com/diegosouzapw/OmniRoute/releases/download/v3.8.49/OmniRoute.Setup.3.8.49.exe',
+  sha256: 'b6f0f209d9a4df9de3a17de8f8f209f6c5dcfa774f3506c6bd2472a17e03100a',
+  size: 340441395
 });
 const OLLAMA_SETUP = Object.freeze({
   version: '0.32.5',
@@ -75,16 +74,17 @@ function omnirouteRuntimeDir() {
   return path.join(app.getPath('userData'), 'omniroute-runtime');
 }
 
-function omnirouteInstallerPath() {
-  return path.join(omnirouteRuntimeDir(), `OmniRoute-Setup-${OMNIROUTE.version}.exe`);
-}
-
 function omnirouteInstallCandidates() {
   const local = process.env.LOCALAPPDATA || '';
+  const pf = process.env.ProgramFiles || '';
+  const pfx86 = process.env['ProgramFiles(x86)'] || '';
   return [
     local && path.join(local, 'Programs', 'OmniRoute', 'OmniRoute.exe'),
     local && path.join(local, 'Programs', 'omniroute-desktop', 'OmniRoute.exe'),
-    local && path.join(local, 'OmniRoute', 'OmniRoute.exe')
+    local && path.join(local, 'Programs', 'omniroute', 'OmniRoute.exe'),
+    local && path.join(local, 'OmniRoute', 'OmniRoute.exe'),
+    pf && path.join(pf, 'OmniRoute', 'OmniRoute.exe'),
+    pfx86 && path.join(pfx86, 'OmniRoute', 'OmniRoute.exe')
   ].filter(Boolean);
 }
 
@@ -94,42 +94,28 @@ function findOmnirouteExecutable() {
   }) || '';
 }
 
-async function verifyManagedOmniroute(executable) {
-  const marker = path.join(omnirouteRuntimeDir(), 'installed.json');
-  if (!fs.existsSync(marker)) return {managed:false, verified:false};
-  try {
-    const data = JSON.parse(fs.readFileSync(marker, 'utf8'));
-    const digest = await sha256File(executable);
-    const verified = data.version === OMNIROUTE.version
-      && data.installerSha256 === OMNIROUTE.sha256
-      && data.installedSha256 === digest;
-    return {managed:true, verified};
-  } catch {
-    return {managed:true, verified:false};
-  }
+function readOmnirouteExecutableVersion(executable) {
+  if (!executable || process.platform !== 'win32') return Promise.resolve('');
+  return new Promise(resolve => {
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', '(Get-Item -LiteralPath $env:ARKEA_OMNIROUTE_EXE).VersionInfo.FileVersion'],
+      {windowsHide:true, timeout:10000, env:{...process.env, ARKEA_OMNIROUTE_EXE:executable}},
+      (error, stdout) => resolve(error ? '' : String(stdout || '').trim())
+    );
+  });
 }
 
-function runInstaller(filePath) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(filePath, ['/S'], {
-      cwd: path.dirname(filePath),
-      windowsHide: true,
-      stdio: 'ignore'
-    });
-    const timer = setTimeout(() => {
-      try { child.kill(); } catch {}
-      reject(new Error('La instalación de OmniRoute superó 20 minutos'));
-    }, 20 * 60 * 1000);
-    child.once('error', error => {
-      clearTimeout(timer);
-      reject(error);
-    });
-    child.once('exit', code => {
-      clearTimeout(timer);
-      if (code === 0) resolve();
-      else reject(new Error(`El instalador de OmniRoute terminó con código ${code}`));
-    });
-  });
+function isSupportedOmnirouteVersion(value) {
+  const match = String(value || '').match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) return false;
+  const current = match.slice(1).map(Number);
+  const minimum = OMNIROUTE.version.split('.').map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    if (current[index] > minimum[index]) return true;
+    if (current[index] < minimum[index]) return false;
+  }
+  return true;
 }
 
 function emitOmnirouteProgress(payload) {
@@ -148,121 +134,47 @@ function sha256File(filePath) {
   });
 }
 
-function allowedDownloadHost(hostname) {
-  const host = String(hostname || '').toLowerCase();
-  return host === 'github.com' || host.endsWith('.githubusercontent.com');
-}
-
-function downloadVerifiedFile(url, destination, redirects = 0) {
-  return new Promise((resolve, reject) => {
-    if (redirects > 5) return reject(new Error('Demasiadas redirecciones al descargar OmniRoute'));
-    let parsed;
-    try { parsed = new URL(url); } catch { return reject(new Error('URL de descarga no válida')); }
-    if (parsed.protocol !== 'https:' || !allowedDownloadHost(parsed.hostname)) {
-      return reject(new Error('Host de descarga de OmniRoute no permitido'));
-    }
-    const request = https.get(parsed, {
-      headers: {'User-Agent': `ARKEA-AI-OmniAgent/${OMNIROUTE.version}`}
-    }, response => {
-      if ([301,302,303,307,308].includes(response.statusCode)) {
-        const location = response.headers.location;
-        response.resume();
-        if (!location) return reject(new Error('Redirección sin destino'));
-        return downloadVerifiedFile(new URL(location, parsed).toString(), destination, redirects + 1).then(resolve, reject);
-      }
-      if (response.statusCode !== 200) {
-        response.resume();
-        return reject(new Error(`Descarga de OmniRoute respondió HTTP ${response.statusCode}`));
-      }
-      const declared = Number(response.headers['content-length'] || 0);
-      if (declared && declared > OMNIROUTE.size + 1024 * 1024) {
-        response.resume();
-        return reject(new Error('Descarga de OmniRoute demasiado grande'));
-      }
-      let received = 0;
-      const output = fs.createWriteStream(destination, {flags:'wx'});
-      const fail = error => {
-        try { output.destroy(); } catch {}
-        try { fs.unlinkSync(destination); } catch {}
-        reject(error);
-      };
-      output.on('error', fail);
-      response.on('error', fail);
-      response.on('data', chunk => {
-        received += chunk.length;
-        if (received > OMNIROUTE.size + 1024 * 1024) {
-          response.destroy(new Error('Descarga de OmniRoute excedió el límite'));
-          return;
-        }
-        output.write(chunk);
-        emitOmnirouteProgress({
-          phase: 'download',
-          received,
-          total: declared || OMNIROUTE.size,
-          percent: Math.min(99, Math.round((received / (declared || OMNIROUTE.size)) * 100))
-        });
-      });
-      response.on('end', () => output.end(async () => {
-        try {
-          if (received !== OMNIROUTE.size) throw new Error(`Tamaño de OmniRoute inesperado: ${received}`);
-          const digest = await sha256File(destination);
-          if (digest.toLowerCase() !== OMNIROUTE.sha256) throw new Error('SHA-256 de OmniRoute no coincide');
-          emitOmnirouteProgress({phase:'verified', percent:100, version:OMNIROUTE.version});
-          resolve(destination);
-        } catch (error) {
-          try { fs.unlinkSync(destination); } catch {}
-          reject(error);
-        }
-      }));
-    });
-    request.setTimeout(120000, () => request.destroy(new Error('Tiempo de descarga agotado')));
-    request.on('error', reject);
-  });
-}
-
 async function installOmnirouteInternal() {
-  const dir = omnirouteRuntimeDir();
-  ensureDir(dir);
   const alreadyInstalled = findOmnirouteExecutable();
   if (alreadyInstalled) {
-    const trust = await verifyManagedOmniroute(alreadyInstalled);
-    if (trust.managed && trust.verified) {
-      emitOmnirouteProgress({phase:'ready', percent:100, version:OMNIROUTE.version});
-      return {ok:true, already:true, path:alreadyInstalled, version:OMNIROUTE.version};
+    const installedVersion = await readOmnirouteExecutableVersion(alreadyInstalled);
+    if (isSupportedOmnirouteVersion(installedVersion)) {
+      emitOmnirouteProgress({phase:'installed', version:installedVersion});
+      return {ok:true, already:true, path:alreadyInstalled, version:installedVersion};
     }
-    logBootstrap('OmniRoute existente no administrado; se reinstalará desde el paquete fijado');
+    logBootstrap(`OmniRoute ${installedVersion || 'sin versión'} requiere actualizarse a ${OMNIROUTE.version}`);
   }
-  const installer = omnirouteInstallerPath();
-  const partial = installer + '.download';
-  try { if (fs.existsSync(partial)) fs.unlinkSync(partial); } catch {}
-  emitOmnirouteProgress({phase:'starting', percent:0, version:OMNIROUTE.version});
-  let verified = false;
-  if (fs.existsSync(installer)) {
-    const stat = fs.statSync(installer);
-    const digest = await sha256File(installer);
-    verified = stat.size === OMNIROUTE.size && digest.toLowerCase() === OMNIROUTE.sha256;
-    if (!verified) fs.unlinkSync(installer);
+  const downloadedInstaller = path.join(app.getPath('downloads'), `OmniRoute.Setup.${OMNIROUTE.version}.exe`);
+  if (fs.existsSync(downloadedInstaller)) {
+    const stat = fs.statSync(downloadedInstaller);
+    const digest = await sha256File(downloadedInstaller);
+    if (stat.size === OMNIROUTE.size && digest.toLowerCase() === OMNIROUTE.sha256) {
+      const openError = await shell.openPath(downloadedInstaller);
+      if (openError) throw new Error(`Windows no pudo abrir el instalador oficial: ${openError}`);
+      logBootstrap(`instalador oficial de OmniRoute ${OMNIROUTE.version} abierto desde Descargas`);
+      emitOmnirouteProgress({phase:'installer-opened', version:OMNIROUTE.version});
+      return {ok:true, installerOpened:true, version:OMNIROUTE.version};
+    }
+    logBootstrap('se ignoró un instalador de OmniRoute en Descargas porque no coincide con SHA-256');
   }
-  if (!verified) {
-    await downloadVerifiedFile(OMNIROUTE.url, partial);
-    fs.renameSync(partial, installer);
-  }
-  emitOmnirouteProgress({phase:'installing', percent:99, version:OMNIROUTE.version});
-  await runInstaller(installer);
-  const executable = findOmnirouteExecutable();
-  if (!executable) throw new Error('OmniRoute terminó de instalarse pero no se encontró su ejecutable');
-  const installedSha256 = await sha256File(executable);
-  fs.writeFileSync(
-    path.join(dir, 'installed.json'),
-    JSON.stringify({version:OMNIROUTE.version, installerSha256:OMNIROUTE.sha256, installedSha256}),
-    {encoding:'utf8', mode:0o600}
-  );
-  logBootstrap(`OmniRoute ${OMNIROUTE.version} instalado desde un paquete verificado`);
-  emitOmnirouteProgress({phase:'ready', percent:100, version:OMNIROUTE.version});
-  return {ok:true, installed:true, path:executable, version:OMNIROUTE.version};
+  const answer = await dialog.showMessageBox({
+    type: 'info',
+    title: `Instalar OmniRoute ${OMNIROUTE.version}`,
+    message: 'Se abrirá la descarga oficial de OmniRoute en tu navegador.',
+    detail: 'Cuando termine, ejecuta OmniRoute.Setup.3.8.49.exe, completa el asistente y vuelve a ARKEA para pulsar "Detectar e iniciar".',
+    buttons: ['Descargar instalador oficial', 'Cancelar'],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true
+  });
+  if (answer.response !== 0) return {ok:false, canceled:true, version:OMNIROUTE.version};
+  await shell.openExternal(OMNIROUTE.url);
+  logBootstrap(`descarga oficial de OmniRoute ${OMNIROUTE.version} abierta en el navegador`);
+  emitOmnirouteProgress({phase:'download-page', version:OMNIROUTE.version});
+  return {ok:true, downloadOpened:true, version:OMNIROUTE.version};
 }
 
-function omnirouteServerOk(timeoutMs = 900) {
+function inspectOmnirouteServer(timeoutMs = 900) {
   const secrets = ensureOmnirouteSecrets();
   const probe = (pathname, authenticated = false) => new Promise(resolve => {
     const req = http.get({
@@ -289,15 +201,22 @@ function omnirouteServerOk(timeoutMs = 900) {
   });
   return (async () => {
     const health = await probe('/api/monitoring/health');
-    if (
-      !health
-      || health.status !== 200
-      || health.data?.status !== 'healthy'
-      || health.data?.version !== OMNIROUTE.version
-    ) return false;
+    if (!health) return {responding:false, healthy:false, authorized:false, version:''};
+    const version = String(health.data?.version || '');
+    const healthy = health.status === 200 && health.data?.status === 'healthy' && Boolean(version);
+    if (!healthy) return {responding:true, healthy:false, authorized:false, version};
+    if (!isSupportedOmnirouteVersion(version)) {
+      return {responding:true, healthy:true, supported:false, authorized:false, version};
+    }
     const models = await probe('/v1/models', true);
-    return Boolean(models && models.status === 200 && Array.isArray(models.data?.data));
+    const authorized = Boolean(models && models.status === 200 && Array.isArray(models.data?.data));
+    return {responding:true, healthy:true, supported:true, authorized, version};
   })();
+}
+
+async function omnirouteServerOk(timeoutMs = 900) {
+  const state = await inspectOmnirouteServer(timeoutMs);
+  return state.authorized;
 }
 
 function ensureOmnirouteSecrets() {
@@ -337,36 +256,35 @@ function ensureOmnirouteSecrets() {
 }
 
 async function startOmnirouteInternal({installIfMissing = false} = {}) {
-  if (await omnirouteServerOk()) {
-    if (omnirouteProcess?.pid) {
-      return {ok:true, running:true, owned:true, port:OMNIROUTE.port};
-    }
-    throw new Error('El puerto 20128 ya está ocupado por otro OmniRoute. Ciérralo para que ARKEA pueda iniciar su instancia autenticada.');
+  const existingServer = await inspectOmnirouteServer();
+  if (existingServer.authorized) {
+    return {
+      ok:true,
+      running:true,
+      owned:Boolean(omnirouteProcess?.pid),
+      port:OMNIROUTE.port,
+      version:existingServer.version
+    };
+  }
+  if (existingServer.healthy && !existingServer.supported) {
+    throw new Error(`OmniRoute ${existingServer.version || 'antiguo'} está abierto. Actualiza a ${OMNIROUTE.version} y ciérralo antes de iniciar desde ARKEA.`);
+  }
+  if (existingServer.healthy) {
+    throw new Error('OmniRoute ya está abierto fuera de ARKEA en el puerto 20128. Ciérralo desde su icono de la bandeja y vuelve a pulsar "Detectar e iniciar".');
+  }
+  if (existingServer.responding) {
+    throw new Error('El puerto 20128 está ocupado por otro programa. Ciérralo antes de iniciar OmniRoute.');
   }
   let executable = findOmnirouteExecutable();
   if (!executable) {
     if (!installIfMissing) return {ok:false, installed:false, message:'OmniRoute todavía no está instalado'};
     await installOmnirouteInternal();
-    executable = findOmnirouteExecutable();
+    throw new Error('Completa el instalador oficial de OmniRoute y después pulsa "Detectar e iniciar".');
   }
   if (!executable) throw new Error('No se encontró el ejecutable instalado de OmniRoute');
-  let trust = await verifyManagedOmniroute(executable);
-  if (!trust.managed) {
-    if (!installIfMissing) {
-      return {
-        ok:false,
-        installed:true,
-        managed:false,
-        message:'La instalación existente no está administrada por ARKEA'
-      };
-    }
-    await installOmnirouteInternal();
-    executable = findOmnirouteExecutable();
-    if (!executable) throw new Error('No se encontró OmniRoute después de instalarlo');
-    trust = await verifyManagedOmniroute(executable);
-  }
-  if (!trust.verified) {
-    throw new Error('La instalación administrada de OmniRoute fue modificada; reinstálala desde ARKEA');
+  const installedVersion = await readOmnirouteExecutableVersion(executable);
+  if (!isSupportedOmnirouteVersion(installedVersion)) {
+    throw new Error(`Está instalado OmniRoute ${installedVersion || 'sin versión detectable'}. Instala la versión oficial ${OMNIROUTE.version} y vuelve a intentarlo.`);
   }
   const secrets = ensureOmnirouteSecrets();
   const env = {
@@ -392,38 +310,55 @@ async function startOmnirouteInternal({installIfMissing = false} = {}) {
     STORAGE_ENCRYPTION_KEY: secrets.storage,
     INITIAL_PASSWORD: secrets.password
   };
-  omnirouteProcess = spawn(executable, ['--headless'], {
+  const logDir = path.join(app.getPath('userData'), 'logs');
+  ensureDir(logDir);
+  const outLog = path.join(logDir, 'omniroute-out.log');
+  const errLog = path.join(logDir, 'omniroute-err.log');
+  const child = spawn(executable, ['--headless'], {
     env,
     cwd: path.dirname(executable),
     windowsHide: true,
-    stdio: 'ignore',
+    stdio: ['ignore', 'pipe', 'pipe'],
     detached: false
   });
-  omnirouteProcess.once('exit', code => {
+  omnirouteProcess = child;
+  let exitCode = null;
+  let exited = false;
+  let spawnError = null;
+  child.stdout?.on('data', data => fs.appendFileSync(outLog, data));
+  child.stderr?.on('data', data => fs.appendFileSync(errLog, data));
+  child.once('error', error => { spawnError = error; });
+  child.once('exit', code => {
+    exited = true;
+    exitCode = code;
     logBootstrap(`OmniRoute terminó con código ${code}`);
-    omnirouteProcess = null;
+    if (omnirouteProcess === child) omnirouteProcess = null;
   });
-  logBootstrap(`OmniRoute ${OMNIROUTE.version} iniciado en loopback:${OMNIROUTE.port}`);
+  logBootstrap(`OmniRoute ${installedVersion} iniciado en loopback:${OMNIROUTE.port}`);
   // La primera inicialización crea base de datos y recursos locales. Evitamos
   // sondeos agresivos mientras Next.js carga su instrumentación y catálogo.
   const readinessStartedAt = Date.now();
   while (Date.now() - readinessStartedAt < 6 * 60 * 1000) {
-    if (await omnirouteServerOk(4000)) {
-      emitOmnirouteProgress({phase:'running', percent:100, version:OMNIROUTE.version});
-      return {ok:true, running:true, installed:true, port:OMNIROUTE.port, version:OMNIROUTE.version};
+    if (spawnError) throw new Error(`Windows no pudo iniciar OmniRoute: ${spawnError.message}`);
+    if (exited) {
+      throw new Error(`OmniRoute se cerró al iniciar (código ${exitCode ?? 'desconocido'}). Revisa ${errLog}`);
+    }
+    const state = await inspectOmnirouteServer(4000);
+    if (state.authorized) {
+      emitOmnirouteProgress({phase:'running', version:state.version});
+      return {ok:true, running:true, installed:true, port:OMNIROUTE.port, version:state.version};
     }
     const elapsedSeconds = Math.round((Date.now() - readinessStartedAt) / 1000);
     if (elapsedSeconds === 0 || elapsedSeconds % 5 < 2) {
       emitOmnirouteProgress({
         phase: 'preparing',
-        percent: Math.min(99, 5 + Math.round((elapsedSeconds / 360) * 90)),
-        version: OMNIROUTE.version,
+        version: installedVersion,
         elapsedSeconds
       });
     }
     await new Promise(resolve => setTimeout(resolve, 1500));
   }
-  throw new Error('OmniRoute no inició dentro de 6 minutos. Revisa el antivirus o el registro de arranque.');
+  throw new Error(`OmniRoute no inició dentro de 6 minutos. Revisa el antivirus y ${errLog}`);
 }
 
 function stopOwnedOmniroute() {
@@ -439,17 +374,17 @@ function stopOwnedOmniroute() {
 
 async function omnirouteDesktopStatus() {
   const executable = findOmnirouteExecutable();
-  const trust = executable
-    ? await verifyManagedOmniroute(executable)
-    : {managed:false, verified:false};
+  const installedVersion = executable ? await readOmnirouteExecutableVersion(executable) : '';
+  const runtime = await inspectOmnirouteServer();
   return {
     ok:true,
     installed:Boolean(executable),
-    managed:trust.managed,
-    verified:trust.verified,
-    running:await omnirouteServerOk(),
+    supported:Boolean(executable) && isSupportedOmnirouteVersion(installedVersion),
+    running:runtime.authorized,
+    portOccupied:runtime.responding && !runtime.authorized,
     owned:Boolean(omnirouteProcess?.pid),
-    version:OMNIROUTE.version,
+    version:runtime.version || installedVersion || OMNIROUTE.version,
+    targetVersion:OMNIROUTE.version,
     port:OMNIROUTE.port
   };
 }

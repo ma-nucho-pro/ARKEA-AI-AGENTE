@@ -107,18 +107,18 @@ def main() -> None:
         {
             "type": "application",
             "name": "OmniRoute",
-            "version": "3.8.48",
+            "version": "3.8.49",
             "licenses": [{"license": {"id": "MIT"}}],
             "hashes": [
                 {
                     "alg": "SHA-256",
-                    "content": "d3295cded2cc6782afaddfef8ff4d4501d09ffc3a7d2ff2acb7955f7884b1806",
+                    "content": "b6f0f209d9a4df9de3a17de8f8f209f6c5dcfa774f3506c6bd2472a17e03100a",
                 }
             ],
             "externalReferences": [
                 {
                     "type": "distribution",
-                    "url": "https://github.com/diegosouzapw/OmniRoute/releases/download/v3.8.48/OmniRoute.Setup.3.8.48.exe",
+                    "url": "https://github.com/diegosouzapw/OmniRoute/releases/download/v3.8.49/OmniRoute.Setup.3.8.49.exe",
                 }
             ],
         },

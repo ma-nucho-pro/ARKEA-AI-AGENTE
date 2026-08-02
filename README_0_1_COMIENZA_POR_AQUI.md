@@ -6,7 +6,7 @@ repositorio de la edición anterior de ARKEA.
 Integra:
 
 - ARKEA como interfaz y agente de escritorio.
-- OmniRoute 3.8.48 como gateway local multi-IA.
+- OmniRoute 3.8.49 o posterior compatible como gateway local multi-IA.
 - Ollama 0.32.5 como motor local opcional.
 - APIs directas compatibles configuradas por el usuario.
 - Skills para todas las llamadas respaldadas por modelos.
@@ -18,12 +18,17 @@ Integra:
 2. Ejecuta
    `0_1-COMIENZA-POR-AQUI-ARKEA-AI-OmniAgent-Setup-0.1.0.exe`.
 3. Abre **ARKEA AI OmniAgent**.
-4. En la bienvenida puedes instalar IA universal u Ollama.
+4. En la bienvenida puedes abrir el instalador oficial de OmniRoute o preparar
+   Ollama.
+5. Para OmniRoute, completa su asistente visible y después pulsa
+   **Ajustes → IA universal → Detectar e iniciar**.
 
 La aplicación instalada incluye su backend; no requiere Python ni Node.js.
-OmniRoute se obtiene desde su release oficial fijado, se comprueba por tamaño
-y SHA-256, y se instala como componente independiente. Ollama se incluye como
-instalador oficial también fijado y verificado.
+ARKEA abre la descarga oficial fijada de OmniRoute; no intenta descargarlo ni
+instalarlo mediante CMD. Si el instalador exacto ya está en `Descargas`, ARKEA
+comprueba tamaño y SHA-256 antes de abrirlo. OmniRoute se instala como programa
+independiente mediante su asistente visible. Ollama se incluye como instalador
+oficial también fijado y verificado.
 
 Los ejecutables de esta entrega no llevan firma Authenticode porque el proyecto
 no dispone de certificado de firma. Windows puede mostrar SmartScreen. No
@@ -52,13 +57,14 @@ mantengan cuotas o modelos gratuitos.
 ## Seguridad local
 
 - ARKEA y OmniRoute escuchan en loopback.
-- OmniRoute 3.8.48 se inicia con `REQUIRE_API_KEY=true`.
+- OmniRoute 3.8.49 o posterior compatible se inicia con
+  `REQUIRE_API_KEY=true`.
 - La clave interna y los secretos de OmniRoute se cifran mediante
   `safeStorage`/DPAPI de Windows; no se guardan en JSON de texto plano.
-- ARKEA solo acepta una instancia OmniRoute instalada y marcada por ARKEA desde
-  el paquete fijado. No reutiliza un proceso ajeno en el puerto 20128.
-- El estado de salud comprueba versión exacta y consulta autenticada de
-  `/v1/models`.
+- ARKEA detecta la instalación oficial en ubicaciones conocidas de Windows y
+  comprueba que su versión sea 3.8.49 o posterior antes de iniciarla.
+- No reutiliza un proceso ajeno en el puerto 20128. El estado de salud comprueba
+  identidad, versión compatible y consulta autenticada de `/v1/models`.
 - El backend de ARKEA exige un token aleatorio por proceso y no escucha en LAN.
 - La carpeta de trabajo es
   `Documentos\ARKEA AI OmniAgent\Projects`; el vault es independiente de la

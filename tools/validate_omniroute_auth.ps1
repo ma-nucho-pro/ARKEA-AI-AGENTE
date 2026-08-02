@@ -3,7 +3,7 @@ Add-Type -AssemblyName System.Net.Http
 
 $exe = Join-Path $env:LOCALAPPDATA "Programs\OmniRoute\OmniRoute.exe"
 if (-not (Test-Path -LiteralPath $exe)) {
-  throw "OmniRoute 3.8.48 no está instalado"
+  throw "OmniRoute 3.8.49 no está instalado"
 }
 
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -86,7 +86,7 @@ try {
       if (
         [int]$health.StatusCode -eq 200 -and
         (ConvertFrom-Json $healthBody).status -eq "healthy" -and
-        (ConvertFrom-Json $healthBody).version -eq "3.8.48"
+        (ConvertFrom-Json $healthBody).version -eq "3.8.49"
       ) {
         $result.ready = $true
         break
@@ -103,7 +103,7 @@ try {
   ).GetAwaiter().GetResult()
   $result.models_without_key = [int]$unauthenticated.StatusCode
 
-  $result.reported_version = "3.8.48"
+  $result.reported_version = "3.8.49"
 
   $modelsRequest = [Net.Http.HttpRequestMessage]::new(
     [Net.Http.HttpMethod]::Get,

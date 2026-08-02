@@ -897,7 +897,7 @@ async function renderChatSettings(){
 async function renderUniversalAI(){
   let data = {gateway:{running:false,installed:false},settings:{mode:settingsCache.ai_engine_mode || 'auto',models:{}}};
   try{ data = await j('/api/arkea/omniroute/status'); }catch(e){ data.error = e.message; }
-  let desktop = {installed:false,running:false,version:'3.8.48'};
+  let desktop = {installed:false,running:false,version:'3.8.49',targetVersion:'3.8.49'};
   try{ if(window.arkeaDesktop?.omnirouteStatus) desktop = await window.arkeaDesktop.omnirouteStatus(); }catch(e){ desktop.error=e.message; }
   const gateway = data.gateway || {};
   const config = data.settings || {};
@@ -909,15 +909,14 @@ async function renderUniversalAI(){
   $('#settingsContent').innerHTML = `
     <h3>IA universal · agentes multi‑modelo</h3>
     <div class="card ${running?'ok':'warn'}">
-      <b><span class="status-led ${running?'ok':installed?'wait':''}"></span>OmniRoute ${esc(desktop.version || gateway.version || '3.8.48')}</b>
-      <p>${running?'Gateway activo en 127.0.0.1:20128.':installed?'Instalado; falta iniciarlo.':'No instalado. El botón descarga el instalador oficial fijado, valida tamaño y SHA‑256 y lo instala una sola vez.'}</p>
+      <b><span class="status-led ${running?'ok':installed?'wait':''}"></span>OmniRoute ${esc(desktop.version || gateway.version || '3.8.49')}</b>
+      <p>${running?'Gateway activo en 127.0.0.1:20128.':installed?(desktop.supported?'Instalación oficial detectada; falta iniciarla desde ARKEA.':`Versión antigua detectada. Instala OmniRoute ${esc(desktop.targetVersion || '3.8.49')}.`):'No instalado. Descarga el instalador oficial, ejecútalo y luego vuelve para detectarlo e iniciarlo.'}</p>
       <div class="actions">
-        <button data-action="install-omniroute" class="primary">Instalar IA gratis</button>
-        <button data-action="start-omniroute">Iniciar OmniRoute</button>
+        <button data-action="install-omniroute" class="primary">Descargar / abrir instalador oficial</button>
+        <button data-action="start-omniroute">Detectar e iniciar</button>
         <button data-action="open-omniroute">Abrir panel</button>
         <button data-action="load-omniroute-models">Ver modelos y combos</button>
       </div>
-      <div class="install-progress"><span id="omniProgressBar"></span></div>
       <div id="omniProgressText" class="muted">${esc(desktop.error || data.error || '')}</div>
     </div>
     <div class="card">
@@ -931,7 +930,7 @@ async function renderUniversalAI(){
     </div>
     <div class="card form-grid">
       <div class="full"><label>Endpoint local de OmniRoute</label><input id="omniBaseUrl" value="${esc(config.base_url || 'http://127.0.0.1:20128')}"/></div>
-      <div class="full"><label>API key de OmniRoute</label><input id="omniApiKey" type="password" placeholder="${config.api_key_configured?'Administrada y cifrada; déjala vacía para conservarla':'Solo necesaria si iniciaste un gateway manual distinto'}"/><small>La instalación administrada por ARKEA crea y entrega esta clave internamente; no necesitas copiarla.</small></div>
+      <div class="full"><label>API key de OmniRoute</label><input id="omniApiKey" type="password" placeholder="${config.api_key_configured?'Administrada y cifrada; déjala vacía para conservarla':'Solo necesaria si iniciaste un gateway manual distinto'}"/><small>Al iniciar OmniRoute desde ARKEA, esta clave se crea y entrega internamente; no necesitas copiarla.</small></div>
       <div><label>Chat</label><input id="omniModelChat" value="${esc(models.chat || 'auto')}"/></div>
       <div><label>Código y agentes</label><input id="omniModelCode" value="${esc(models.code || 'auto/coding')}"/></div>
       <div><label>Visión</label><input id="omniModelVision" value="${esc(models.vision || 'auto')}"/></div>
@@ -947,13 +946,11 @@ async function renderUniversalAI(){
 }
 
 function setOmniProgress(payload={}){
-  const bar = $('#omniProgressBar');
   const text = $('#omniProgressText');
-  if(bar) bar.style.width = `${Math.max(0,Math.min(100,Number(payload.percent || 0)))}%`;
   if(text){
-    const names = {starting:'Preparando descarga verificada…',download:'Descargando OmniRoute…',verified:'Tamaño y SHA‑256 correctos.',installing:'Instalando OmniRoute una sola vez…',preparing:'Inicializando el servicio local…',ready:'OmniRoute ya está instalado.',running:'OmniRoute está funcionando.'};
-    const size = payload.total ? ` ${Math.round((payload.received || 0)/1048576)} / ${Math.round(payload.total/1048576)} MB` : '';
-    text.textContent = (names[payload.phase] || payload.phase || 'Trabajando…') + size;
+    const names = {'download-page':'Descarga oficial abierta en el navegador. Ejecuta el instalador y vuelve aquí.','installer-opened':'Instalador oficial abierto. Completa el asistente y vuelve aquí.',installed:'Instalación oficial detectada.',preparing:'Inicializando el servicio local…',running:'OmniRoute está funcionando.'};
+    const elapsed = payload.elapsedSeconds ? ` (${payload.elapsedSeconds} s)` : '';
+    text.textContent = (names[payload.phase] || payload.phase || 'Trabajando…') + elapsed;
   }
 }
 
@@ -981,16 +978,12 @@ async function configureUniversalAi(forcedMode=''){
 }
 
 async function installOmniroute(){
-  if(!window.arkeaDesktop?.installOmniroute) throw new Error('La instalación automática funciona dentro del EXE de Windows.');
+  if(!window.arkeaDesktop?.installOmniroute) throw new Error('La descarga guiada funciona dentro del EXE de Windows.');
   if(removeOmnirouteProgress) removeOmnirouteProgress();
   removeOmnirouteProgress = window.arkeaDesktop.onOmnirouteProgress?.(setOmniProgress) || null;
   try{
-    await window.arkeaDesktop.installOmniroute();
-    await window.arkeaDesktop.startOmniroute();
-    await configureUniversalAi();
-    await j('/api/arkea/omniroute/apply',{method:'POST'});
-    setOmniProgress({phase:'running',percent:100});
-    await renderUniversalAI();
+    const result = await window.arkeaDesktop.installOmniroute();
+    if(result?.already) setOmniProgress({phase:'installed'});
   }finally{
     if(removeOmnirouteProgress){ removeOmnirouteProgress(); removeOmnirouteProgress=null; }
   }
@@ -998,10 +991,17 @@ async function installOmniroute(){
 
 async function startOmniroute(){
   if(!window.arkeaDesktop?.startOmniroute) throw new Error('Abre esta edición desde el EXE de Windows.');
-  setOmniProgress({phase:'starting',percent:5});
-  await window.arkeaDesktop.startOmniroute();
-  await j('/api/arkea/omniroute/apply',{method:'POST'});
-  await renderUniversalAI();
+  if(removeOmnirouteProgress) removeOmnirouteProgress();
+  removeOmnirouteProgress = window.arkeaDesktop.onOmnirouteProgress?.(setOmniProgress) || null;
+  try{
+    setOmniProgress({phase:'preparing'});
+    await window.arkeaDesktop.startOmniroute();
+    await configureUniversalAi();
+    await j('/api/arkea/omniroute/apply',{method:'POST'});
+    await renderUniversalAI();
+  }finally{
+    if(removeOmnirouteProgress){ removeOmnirouteProgress(); removeOmnirouteProgress=null; }
+  }
 }
 
 async function connectOmniroute(){
@@ -1388,8 +1388,8 @@ async function finishOnboarding(){
   $('#onboardingModal').hidden = true;
   if(installPack) installRequiredPack();
   if(installFree){
-    addMsg('assistant', 'Instalando OmniRoute 3.8.48 desde la publicación oficial y verificando SHA‑256. Puedes seguir usando ARKEA.');
-    installOmniroute().then(()=>addMsg('assistant','IA gratis multi‑proveedor instalada y conectada.')).catch(e=>addMsg('assistant','No pude completar OmniRoute: '+e.message));
+    addMsg('assistant', 'Abriendo el instalador oficial de OmniRoute 3.8.49. Completa el asistente y después usa Ajustes → IA universal → Detectar e iniciar.');
+    installOmniroute().catch(e=>addMsg('assistant','No pude abrir el instalador de OmniRoute: '+e.message));
   }
   addMsg('assistant', `Te llamaré ${name}. Puedes cambiarlo en Ajustes → Personaje.`);
   await speak(`Te llamaré ${name}.`);

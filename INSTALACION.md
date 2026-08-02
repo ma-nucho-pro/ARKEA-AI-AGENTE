@@ -9,8 +9,11 @@
 4. Abre ARKEA AI OmniAgent y elige IA local, IA gratuita o una API propia.
 
 El instalador incluye la aplicación, su backend y el instalador verificado de
-Ollama. El botón **Instalar IA gratis** obtiene la versión fijada de OmniRoute y
-verifica su tamaño y SHA-256 antes de ejecutarla.
+Ollama. Para OmniRoute, pulsa **Descargar / abrir instalador oficial**, completa
+el asistente visible `OmniRoute.Setup.3.8.49.exe` y después pulsa **Detectar e
+iniciar**. ARKEA no descarga ni ejecuta OmniRoute mediante CMD. Si el archivo
+oficial exacto ya está en `Descargas`, valida su tamaño y SHA-256 antes de
+abrirlo.
 
 La entrega no tiene firma Authenticode. Windows puede mostrar SmartScreen; los
 hashes oficiales se adjuntan en `SHA256SUMS.txt` dentro de cada Release.

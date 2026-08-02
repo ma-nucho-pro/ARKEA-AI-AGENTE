@@ -24,6 +24,10 @@ Los binarios se publican como archivos de una Release porque superan el límite
 de tamaño de un archivo normal del repositorio. El código fuente permanece
 completo y revisable aquí.
 
+OmniRoute se instala por separado con su asistente oficial `3.8.49`: ARKEA abre
+la descarga oficial y después lo detecta e inicia desde **Ajustes → IA universal
+→ Detectar e iniciar**. ARKEA ya no intenta descargarlo mediante CMD.
+
 Consulta [INSTALACION.md](INSTALACION.md) para los pasos de usuario y
 desarrollador. Para publicar este repositorio por primera vez sigue
 [GUIA_PUBLICAR_GITHUB.md](GUIA_PUBLICAR_GITHUB.md).
