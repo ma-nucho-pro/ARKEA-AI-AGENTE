@@ -4,6 +4,10 @@
 </p>
 <!-- manucho-readme-banner:end -->
 
+<p align="center">
+  <img src="assets/readme/project-logo.svg" width="240" alt="ARKEA AI 3D project logo">
+</p>
+
 # ARKEA AI OmniAgent 0.1
 
 Código fuente abierto de ARKEA AI OmniAgent para Windows, distribuido bajo
