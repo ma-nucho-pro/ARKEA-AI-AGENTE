@@ -1,3 +1,9 @@
+<!-- manucho-readme-banner:start -->
+<p align="center">
+  <img src="assets/readme/banner.svg" alt="ARKEA AI OMNIAGENT project overview" width="100%">
+</p>
+<!-- manucho-readme-banner:end -->
+
 # ARKEA AI OmniAgent 0.1
 
 Código fuente abierto de ARKEA AI OmniAgent para Windows, distribuido bajo
